@@ -4,14 +4,30 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Bubble Pop Game</title>
+    <link rel="icon" type="image/svg+xml" href="favicon.svg">
     <link rel="stylesheet" href="style.css">
+    <!-- Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-XXXXXXXXXX"></script>
+    <script>
+        window.dataLayer = window.dataLayer || [];
+        function gtag(){dataLayer.push(arguments);}
+        gtag('js', new Date());
+        gtag('config', 'G-XXXXXXXXXX');
+    </script>
 </head>
 <body>
     <div class="game-container">
         <div class="score">Score: <span id="score">0</span></div>
+        <div class="high-score">High Score: <span id="highScore">0</span></div>
         <canvas id="gameCanvas"></canvas>
         <div class="controls">
             <button id="startButton">Start Game</button>
+            <button id="pauseButton" style="display: none;">Pause</button>
+        </div>
+        <div class="power-ups">
+            <div class="power-up" id="shield">🛡️</div>
+            <div class="power-up" id="slowMotion">⏰</div>
+            <div class="power-up" id="doublePoints">2x</div>
         </div>
     </div>
     <script src="game.js"></script>
