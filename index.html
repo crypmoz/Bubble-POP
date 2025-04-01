@@ -7,8 +7,20 @@
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
+    <div class="stars"></div>
     <div class="game-container">
         <canvas id="gameCanvas"></canvas>
+        <div class="score-container">
+            <div>Score: <span id="score">0</span></div>
+            <div>High Score: <span id="highScore">0</span></div>
+        </div>
+        <div class="mode-selector">
+            <button class="mode-button active" data-mode="zen">Zen Mode</button>
+            <button class="mode-button" data-mode="fast">Fast Mode</button>
+        </div>
+        <button id="startButton">Start Game</button>
+        <button id="pauseButton" style="display: none;">Pause</button>
+        <div id="gameOverlay"></div>
     </div>
     <script src="game.js"></script>
 </body>

@@ -288,94 +288,38 @@ class Game {
             },
             hitArea: { multiplier: 1.2 }
         };
-        
-        // Create game container if it doesn't exist
-        let gameContainer = document.querySelector('.game-container');
-        if (!gameContainer) {
-            gameContainer = document.createElement('div');
-            gameContainer.className = 'game-container';
-            document.body.appendChild(gameContainer);
-            gameContainer.appendChild(this.canvas);
-        }
-        
-        // Create score container if it doesn't exist
-        let scoreContainer = document.querySelector('.score-container');
-        if (!scoreContainer) {
-            scoreContainer = document.createElement('div');
-            scoreContainer.className = 'score-container';
-            scoreContainer.innerHTML = `
-                <div>Score: <span id="score">0</span></div>
-                <div>High Score: <span id="highScore">0</span></div>
-            `;
-            document.body.appendChild(scoreContainer);
-        }
-        
-        // Create start button if it doesn't exist
-        let startButton = document.getElementById('startButton');
-        if (!startButton) {
-            startButton = document.createElement('button');
-            startButton.id = 'startButton';
-            startButton.textContent = 'Start Game';
-            document.body.appendChild(startButton);
-        }
-        
-        // Create pause button if it doesn't exist
-        let pauseButton = document.getElementById('pauseButton');
-        if (!pauseButton) {
-            pauseButton = document.createElement('button');
-            pauseButton.id = 'pauseButton';
-            pauseButton.textContent = 'Pause';
-            pauseButton.style.display = 'none';
-            document.body.appendChild(pauseButton);
-        }
-        
-        this.startButton = startButton;
-        this.pauseButton = pauseButton;
+
+        // Get DOM elements
+        this.startButton = document.getElementById('startButton');
+        this.pauseButton = document.getElementById('pauseButton');
         this.scoreElement = document.getElementById('score');
         this.highScoreElement = document.getElementById('highScore');
+        this.gameOverlay = document.getElementById('gameOverlay');
         
-        // Create game overlay if it doesn't exist
-        let gameOverlay = document.getElementById('gameOverlay');
-        if (!gameOverlay) {
-            gameOverlay = document.createElement('div');
-            gameOverlay.id = 'gameOverlay';
-            document.body.appendChild(gameOverlay);
-        }
-        this.gameOverlay = gameOverlay;
-        
-        this.createModeSelector();
+        // Initialize the game
         this.setupEventListeners();
         this.createStarryBackground();
         this.resizeCanvas();
+        
+        // Set initial values
         this.highScoreElement.textContent = this.highScore;
         this.currentMode = 'zen';
         
-        // Initial canvas size
-        this.resizeCanvas();
+        // Set up mode buttons
+        document.querySelectorAll('.mode-button').forEach(button => {
+            button.addEventListener('click', () => {
+                const mode = button.getAttribute('data-mode');
+                if (mode) this.setGameMode(mode);
+            });
+        });
         
         // Start animation loop
         requestAnimationFrame(() => this.animate(0));
     }
 
-    createModeSelector() {
-        const oldPowerUps = document.querySelector('.power-ups');
-        if (oldPowerUps) oldPowerUps.remove();
-
-        const modeSelector = document.createElement('div');
-        modeSelector.className = 'mode-selector';
-
-        ['zen', 'fast'].forEach(mode => {
-            const button = document.createElement('button');
-            button.className = `mode-button ${mode === 'zen' ? 'active' : ''}`;
-            button.textContent = `${mode.charAt(0).toUpperCase() + mode.slice(1)} Mode`;
-            button.onclick = () => this.setGameMode(mode);
-            modeSelector.appendChild(button);
-        });
-
-        document.body.appendChild(modeSelector);
-    }
-
     setGameMode(mode) {
+        if (!this.modes[mode]) return;
+        
         this.currentMode = mode;
         const settings = this.modes[mode];
         
@@ -384,10 +328,53 @@ class Game {
         this.config.bubble.maxBubbles = settings.maxBubbles;
         
         document.querySelectorAll('.mode-button').forEach(button => {
-            button.classList.toggle('active', button.textContent.toLowerCase().includes(mode));
+            button.classList.toggle('active', button.getAttribute('data-mode') === mode);
         });
 
         this.bubbles.forEach(bubble => bubble.speed = settings.baseSpeed);
+    }
+
+    setupEventListeners() {
+        const handleInteraction = (e) => {
+            if (!this.isPlaying || this.isPaused) return;
+            
+            e.preventDefault();
+            const rect = this.canvas.getBoundingClientRect();
+            const scaleX = this.canvas.width / rect.width;
+            const scaleY = this.canvas.height / rect.height;
+            
+            let x, y;
+            if (e.type === 'touchstart') {
+                x = (e.touches[0].clientX - rect.left) * scaleX;
+                y = (e.touches[0].clientY - rect.top) * scaleY;
+            } else {
+                x = (e.clientX - rect.left) * scaleX;
+                y = (e.clientY - rect.top) * scaleY;
+            }
+            
+            this.handleClick(x, y);
+        };
+
+        this.canvas.addEventListener('touchstart', handleInteraction, { passive: false });
+        this.canvas.addEventListener('click', handleInteraction);
+        
+        window.addEventListener('resize', () => {
+            this.resizeCanvas();
+            // Reposition bubbles after resize
+            this.bubbles.forEach(bubble => {
+                if (bubble.x > this.canvas.width) {
+                    bubble.x = this.canvas.width - bubble.radius;
+                }
+            });
+        });
+        
+        this.startButton.addEventListener('click', () => this.startGame());
+        this.pauseButton.addEventListener('click', () => this.togglePause());
+        
+        // Prevent scrolling on mobile
+        document.addEventListener('touchmove', (e) => {
+            if (this.isPlaying) e.preventDefault();
+        }, { passive: false });
     }
 
     createBubble() {
@@ -473,36 +460,6 @@ class Game {
             
             container.appendChild(star);
         }
-    }
-
-    setupEventListeners() {
-        const handleInteraction = (e) => {
-            if (!this.isPlaying || this.isPaused) return;
-            
-            const rect = this.canvas.getBoundingClientRect();
-            const scaleX = this.canvas.width / rect.width;
-            const scaleY = this.canvas.height / rect.height;
-            
-            const x = (e.clientX || e.touches[0].clientX - rect.left) * scaleX;
-            const y = (e.clientY || e.touches[0].clientY - rect.top) * scaleY;
-            
-            this.handleClick(x, y);
-        };
-
-        this.canvas.addEventListener('touchstart', (e) => {
-            e.preventDefault();
-            handleInteraction(e);
-        }, { passive: false });
-
-        this.canvas.addEventListener('click', handleInteraction);
-
-        document.addEventListener('touchmove', (e) => {
-            if (this.isPlaying) e.preventDefault();
-        }, { passive: false });
-
-        window.addEventListener('resize', () => this.resizeCanvas());
-        this.startButton.addEventListener('click', () => this.startGame());
-        this.pauseButton.addEventListener('click', () => this.togglePause());
     }
 
     handleClick(x, y) {
