@@ -282,6 +282,8 @@ class Game {
         this.bubbles = [];
         this.particles = [];
         this.lastBubbleTime = 0;
+        this.gameStartTime = 0;
+        this.lastBubbleIncreaseTime = 0;
         
         // Game modes configuration
         this.modes = {
@@ -291,7 +293,8 @@ class Game {
                 baseSpeed: 1.05,
                 maxSpeed: 1.05,
                 negativeBubbleChance: 0.05,
-                maxBubbles: 14
+                maxBubbles: 14,
+                baseMaxBubbles: 14
             },
             fast: {
                 spawnInterval: 1000,
@@ -299,7 +302,8 @@ class Game {
                 baseSpeed: 2.75,
                 maxSpeed: 2.75,
                 negativeBubbleChance: 0.2,
-                maxBubbles: 15
+                maxBubbles: 15,
+                baseMaxBubbles: 15
             }
         };
         
@@ -375,6 +379,7 @@ class Game {
         // Update only speed-related settings without restarting the game
         this.config.bubble.baseSpeed = settings.baseSpeed;
         this.config.bubble.maxSpeed = settings.maxSpeed;
+        this.config.bubble.maxBubbles = settings.maxBubbles;
         
         // Update button states
         const buttons = document.querySelectorAll('.mode-button');
@@ -418,6 +423,13 @@ class Game {
         // Clear only the canvas area
         this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
 
+        // Check for bubble increase every 90 seconds
+        const currentGameTime = Date.now();
+        if (currentGameTime - this.lastBubbleIncreaseTime >= 90000) { // 90 seconds
+            this.increaseBubbleCount();
+            this.lastBubbleIncreaseTime = currentGameTime;
+        }
+
         // Update and draw particles
         this.particles = this.particles.filter(particle => {
             particle.update();
@@ -441,6 +453,15 @@ class Game {
         }
 
         this.animationFrameId = requestAnimationFrame((time) => this.animate(time));
+    }
+
+    increaseBubbleCount() {
+        // Increase max bubbles by 5% for both modes
+        this.modes.zen.maxBubbles = Math.floor(this.modes.zen.maxBubbles * 1.05);
+        this.modes.fast.maxBubbles = Math.floor(this.modes.fast.maxBubbles * 1.05);
+        
+        // Update current mode's max bubbles
+        this.config.bubble.maxBubbles = this.modes[this.currentMode].maxBubbles;
     }
 
     createStarryBackground() {
@@ -576,7 +597,13 @@ class Game {
         this.bubbles = [];
         this.particles = [];
         this.isPaused = false;
-        this.config.bubble.spawnInterval = this.config.bubble.spawnInterval;
+        this.gameStartTime = Date.now();
+        this.lastBubbleIncreaseTime = this.gameStartTime;
+        
+        // Reset bubble counts to base values
+        this.modes.zen.maxBubbles = this.modes.zen.baseMaxBubbles;
+        this.modes.fast.maxBubbles = this.modes.fast.baseMaxBubbles;
+        this.config.bubble.maxBubbles = this.modes.zen.maxBubbles;
         
         this.startButton.style.display = 'none';
         this.pauseButton.style.display = 'inline-block';
