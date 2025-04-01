@@ -272,6 +272,10 @@ class Bubble {
 
 class Game {
     constructor() {
+        this.dpr = window.devicePixelRatio || 1;
+        this.isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+        this.isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
+        
         this.canvas = document.getElementById('gameCanvas');
         this.ctx = this.canvas.getContext('2d');
         this.score = 0;
@@ -283,7 +287,6 @@ class Game {
         this.lastBubbleTime = 0;
         this.bubbleInterval = 1000;
         this.particles = [];
-        this.isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
         
         // Get DOM elements
         this.startButton = document.getElementById('startButton');
@@ -353,108 +356,325 @@ class Game {
             }, { passive: false });
         });
 
-        // Handle touch events
+        // Game configuration
+        this.config = {
+            bubble: {
+                baseSize: 0.03,
+                sizeVariation: 0.5,
+                spawnWidth: 0.9,
+                baseSpeed: 1.5,
+                maxSpeed: 4,
+                speedIncrease: 0.1,
+                spawnInterval: {
+                    initial: 1000,
+                    min: 400,
+                    decrease: 50
+                }
+            },
+            hitArea: {
+                multiplier: 1.2
+            },
+            combo: {
+                timeout: 2000,
+                multiplier: {
+                    base: 1,
+                    max: 3,
+                    increase: 0.5
+                }
+            }
+        };
+
+        // Initialize canvas with proper scaling
+        this.initializeCanvas();
+        
+        // Set up event listeners with proper touch handling
+        this.setupEventListeners();
+        
+        // Initialize game state
+        this.resetGameState();
+    }
+
+    initializeCanvas() {
+        this.canvas = document.getElementById('gameCanvas');
+        this.ctx = this.canvas.getContext('2d');
+        this.resizeCanvas();
+        
+        // Enable image smoothing for better bubble rendering
+        this.ctx.imageSmoothingEnabled = true;
+        this.ctx.imageSmoothingQuality = 'high';
+    }
+
+    setupEventListeners() {
+        // Touch events with proper coordinate calculation
         this.canvas.addEventListener('touchstart', (e) => {
             e.preventDefault();
             const touch = e.touches[0];
             const rect = this.canvas.getBoundingClientRect();
-            const dpr = window.devicePixelRatio || 1;
-            
-            const x = ((touch.clientX - rect.left) * dpr);
-            const y = ((touch.clientY - rect.top) * dpr);
-            
-            this.handleClick(x, y);
+            const x = (touch.clientX - rect.left) * this.dpr;
+            const y = (touch.clientY - rect.top) * this.dpr;
+            this.handleInteraction(x, y);
         }, { passive: false });
 
-        // Handle mouse events
+        // Mouse events with consistent coordinate handling
         this.canvas.addEventListener('click', (e) => {
             const rect = this.canvas.getBoundingClientRect();
-            const dpr = window.devicePixelRatio || 1;
-            
-            const x = (e.clientX - rect.left) * dpr;
-            const y = (e.clientY - rect.top) * dpr;
-            
-            this.handleClick(x, y);
+            const x = (e.clientX - rect.left) * this.dpr;
+            const y = (e.clientY - rect.top) * this.dpr;
+            this.handleInteraction(x, y);
         });
 
-        // Prevent scrolling while playing
-        document.body.addEventListener('touchmove', (e) => {
-            if (this.isPlaying) {
-                e.preventDefault();
-            }
+        // Prevent unwanted mobile behaviors
+        document.addEventListener('touchmove', (e) => {
+            if (this.isPlaying) e.preventDefault();
         }, { passive: false });
-        
-        // Handle window resize
+
+        document.addEventListener('touchend', (e) => {
+            if (this.isPlaying) e.preventDefault();
+        }, { passive: false });
+
+        // Handle resize with debouncing
+        let resizeTimeout;
         window.addEventListener('resize', () => {
-            clearTimeout(this.resizeTimeout);
-            this.resizeTimeout = setTimeout(() => {
+            clearTimeout(resizeTimeout);
+            resizeTimeout = setTimeout(() => {
                 this.resizeCanvas();
-                if (this.isPlaying) {
-                    this.adjustBubblePositions();
-                }
-            }, 100);
+                this.adjustGameElements();
+            }, 250);
+        });
+
+        // Handle visibility change
+        document.addEventListener('visibilitychange', () => {
+            if (document.hidden && this.isPlaying && !this.isPaused) {
+                this.togglePause();
+            }
+        });
+    }
+
+    handleInteraction(x, y) {
+        if (!this.isPlaying || this.isPaused) return;
+
+        let hitBubble = false;
+        const currentTime = Date.now();
+
+        // Update combo
+        if (currentTime - this.lastBubblePopTime > this.config.combo.timeout) {
+            this.combo = this.config.combo.multiplier.base;
+        }
+
+        // Create touch feedback
+        this.createTouchFeedback(x, y);
+
+        // Process bubble hits
+        this.bubbles = this.bubbles.filter(bubble => {
+            if (!bubble || !this.isValidBubble(bubble)) return false;
+
+            const distance = this.getDistance(x, y, bubble.x, bubble.y);
+            const hitRadius = bubble.radius * this.config.hitArea.multiplier;
+
+            if (distance <= hitRadius) {
+                hitBubble = true;
+                this.processBubbleHit(bubble, x, y);
+                return false;
+            }
+            return true;
+        });
+
+        // Provide haptic feedback
+        if (hitBubble && navigator.vibrate) {
+            navigator.vibrate(50);
+        }
+    }
+
+    isValidBubble(bubble) {
+        return bubble && 
+               typeof bubble.x === 'number' && 
+               typeof bubble.y === 'number' &&
+               !isNaN(bubble.x) && 
+               !isNaN(bubble.y);
+    }
+
+    getDistance(x1, y1, x2, y2) {
+        return Math.sqrt(Math.pow(x2 - x1, 2) + Math.pow(y2 - y1, 2));
+    }
+
+    processBubbleHit(bubble, x, y) {
+        const basePoints = this.powerUps.doublePoints.active ? bubble.points * 2 : bubble.points;
+        const finalPoints = Math.round(basePoints * this.combo);
+        
+        this.score += finalPoints;
+        this.scoreElement.textContent = this.score;
+        
+        this.showPointsPopup(x, y, finalPoints);
+        this.createPopEffect(bubble);
+        
+        if (this.score > this.highScore) {
+            this.highScore = this.score;
+            this.highScoreElement.textContent = this.highScore;
+            localStorage.setItem('highScore', this.highScore);
+        }
+
+        // Update combo
+        this.combo = Math.min(
+            this.combo + this.config.combo.multiplier.increase,
+            this.config.combo.multiplier.max
+        );
+        this.lastBubblePopTime = Date.now();
+    }
+
+    createBubble() {
+        const screenSize = Math.min(this.canvas.width, this.canvas.height);
+        const baseSize = screenSize * this.config.bubble.baseSize;
+        const sizeVariation = baseSize * this.config.bubble.sizeVariation;
+        const radius = baseSize + Math.random() * sizeVariation;
+
+        const usableWidth = this.canvas.width * this.config.bubble.spawnWidth;
+        const margin = (this.canvas.width - usableWidth) / 2;
+        
+        const x = margin + Math.random() * usableWidth;
+        const y = this.canvas.height + radius;
+
+        const bubble = new Bubble(x, y, radius, this.getRandomColor());
+        bubble.speed = this.getBubbleSpeed();
+        bubble.canvas = this.canvas;
+        
+        return bubble;
+    }
+
+    getBubbleSpeed() {
+        const speedIncrease = Math.floor(this.score / 100) * this.config.bubble.speedIncrease;
+        return Math.min(
+            this.config.bubble.maxSpeed,
+            this.config.bubble.baseSpeed + speedIncrease
+        );
+    }
+
+    getRandomColor() {
+        const colors = [
+            'hsl(0, 80%, 60%)',    // Red
+            'hsl(30, 80%, 60%)',   // Orange
+            'hsl(60, 80%, 60%)',   // Yellow
+            'hsl(120, 80%, 60%)',  // Green
+            'hsl(180, 80%, 60%)',  // Cyan
+            'hsl(240, 80%, 60%)',  // Blue
+            'hsl(300, 80%, 60%)',  // Purple
+            'hsl(330, 80%, 60%)'   // Pink
+        ];
+        return colors[Math.floor(Math.random() * colors.length)];
+    }
+
+    animate(currentTime) {
+        if (!this.isPlaying || this.isPaused) return;
+
+        // Frame rate control
+        if (currentTime - this.lastFrameTime < this.frameInterval) {
+            this.animationFrameId = requestAnimationFrame(time => this.animate(time));
+            return;
+        }
+        this.lastFrameTime = currentTime;
+
+        // Clear canvas
+        this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+
+        // Update and draw game elements
+        this.updateParticles();
+        this.updateBubbles();
+        this.spawnBubbles(currentTime);
+
+        // Request next frame
+        this.animationFrameId = requestAnimationFrame(time => this.animate(time));
+    }
+
+    updateParticles() {
+        this.particles = this.particles.filter(particle => {
+            particle.update();
+            particle.draw(this.ctx);
+            if (particle.life <= 0) {
+                this.recycleParticle(particle);
+                return false;
+            }
+            return true;
+        });
+    }
+
+    updateBubbles() {
+        this.bubbles = this.bubbles.filter(bubble => {
+            if (bubble.y + bubble.radius < 0) return false;
+            bubble.update();
+            bubble.draw(this.ctx);
+            return true;
+        });
+    }
+
+    spawnBubbles(currentTime) {
+        const spawnInterval = Math.max(
+            this.config.bubble.spawnInterval.min,
+            this.config.bubble.spawnInterval.initial - 
+            (Math.floor(this.score / 100) * this.config.bubble.spawnInterval.decrease)
+        );
+
+        if (currentTime - this.lastBubbleTime > spawnInterval) {
+            this.bubbles.push(this.createBubble());
+            this.lastBubbleTime = currentTime;
+        }
+    }
+
+    resizeCanvas() {
+        const rect = this.canvas.getBoundingClientRect();
+        
+        this.canvas.width = rect.width * this.dpr;
+        this.canvas.height = rect.height * this.dpr;
+        
+        this.ctx.scale(this.dpr, this.dpr);
+        
+        // Adjust existing bubbles
+        this.adjustGameElements();
+    }
+
+    adjustGameElements() {
+        if (!this.isPlaying) return;
+
+        const usableWidth = this.canvas.width * this.config.bubble.spawnWidth;
+        const margin = (this.canvas.width - usableWidth) / 2;
+
+        this.bubbles.forEach(bubble => {
+            if (bubble.x < margin) {
+                bubble.x = margin + bubble.radius;
+            } else if (bubble.x > this.canvas.width - margin) {
+                bubble.x = this.canvas.width - margin - bubble.radius;
+            }
+        });
+    }
+
+    resetGameState() {
+        this.score = 0;
+        this.combo = this.config.combo.multiplier.base;
+        this.lastBubblePopTime = 0;
+        this.bubbles = [];
+        this.particles = [];
+        this.lastFrameTime = 0;
+        this.lastBubbleTime = 0;
+    }
+
+    startGame() {
+        this.isPlaying = true;
+        this.score = 0;
+        this.scoreElement.textContent = '0';
+        this.bubbles = [];
+        this.particles = [];
+        this.isPaused = false;
+        this.lastFrameTime = 0;
+        
+        this.startButton.style.display = 'none';
+        this.pauseButton.style.display = 'inline-block';
+        this.gameOverlay.style.display = 'none';
+        
+        // Reset any active power-ups
+        Object.values(this.powerUps).forEach(powerUp => {
+            powerUp.active = false;
+            powerUp.element.classList.remove('active');
         });
         
-        // Initial setup
-        this.createStarryBackground();
-        this.resizeCanvas();
-        this.highScoreElement.textContent = this.highScore;
-        this.gameOverlay.style.display = 'flex';
-
-        // Add special bubble settings
-        this.specialBubbleSettings = {
-            star: {
-                probability: 0.05,
-                points: 10,
-                color: '#FFD700'
-            },
-            bomb: {
-                probability: 0.05,
-                points: -5,
-                color: '#FF0000'
-            },
-            rainbow: {
-                probability: 0.05,
-                points: 5,
-                color: null
-            }
-        };
-
-        // Add object pooling
-        this.particlePool = [];
-        this.maxParticlePoolSize = 200;
-        this.popupPool = [];
-        this.maxPopupPoolSize = 50;
-        
-        // Game balance settings
-        this.gameSettings = {
-            powerUpCooldowns: {
-                shield: 30000,    // 30 seconds
-                slowMotion: 25000, // 25 seconds
-                doublePoints: 35000 // 35 seconds
-            },
-            difficulty: {
-                initialSpeed: 1,
-                maxSpeed: 4,
-                speedIncrease: 0.1,
-                speedIncreaseInterval: 1000, // Every 1000 points
-                bubbleInterval: {
-                    initial: 1000,
-                    min: 500
-                }
-            },
-            scoring: {
-                comboMultiplier: {
-                    threshold: 5,
-                    maxMultiplier: 3
-                }
-            }
-        };
-        
-        // Game state
-        this.combo = 0;
-        this.lastBubblePopTime = 0;
-        this.comboTimeout = 2000; // 2 seconds to maintain combo
+        this.animate(0);
     }
     
     getParticle() {
@@ -481,176 +701,6 @@ class Game {
         if (this.popupPool.length < this.maxPopupPoolSize) {
             popup.remove();
             this.popupPool.push(popup);
-        }
-    }
-    
-    startGame() {
-        this.isPlaying = true;
-        this.score = 0;
-        this.scoreElement.textContent = '0';
-        this.bubbles = [];
-        this.particles = [];
-        this.isPaused = false;
-        this.lastFrameTime = 0;
-        
-        this.startButton.style.display = 'none';
-        this.pauseButton.style.display = 'inline-block';
-        this.gameOverlay.style.display = 'none';
-        
-        // Reset any active power-ups
-        Object.values(this.powerUps).forEach(powerUp => {
-            powerUp.active = false;
-            powerUp.element.classList.remove('active');
-        });
-        
-        this.animate(0);
-    }
-    
-    createBubble() {
-        const screenSize = Math.min(this.canvas.width, this.canvas.height);
-        const minSize = screenSize * (this.isMobile ? 0.04 : 0.03);
-        const maxSize = minSize * 1.5;
-        const radius = Math.random() * (maxSize - minSize) + minSize;
-        
-        // Use 80% of canvas width for bubble spawning
-        const usableWidth = this.canvas.width * 0.8;
-        const margin = (this.canvas.width - usableWidth) / 2;
-        
-        const x = margin + Math.random() * usableWidth;
-        const y = this.canvas.height + radius;
-        
-        const colors = [
-            'hsl(0, 80%, 60%)',    // Red
-            'hsl(30, 80%, 60%)',   // Orange
-            'hsl(60, 80%, 60%)',   // Yellow
-            'hsl(120, 80%, 60%)',  // Green
-            'hsl(180, 80%, 60%)',  // Cyan
-            'hsl(240, 80%, 60%)',  // Blue
-            'hsl(300, 80%, 60%)',  // Purple
-            'hsl(330, 80%, 60%)'   // Pink
-        ];
-        
-        const color = colors[Math.floor(Math.random() * colors.length)];
-        const bubble = new Bubble(x, y, radius, color);
-        bubble.canvas = this.canvas;
-        return bubble;
-    }
-    
-    animate(currentTime) {
-        if (!this.isPlaying || this.isPaused) return;
-        
-        // Frame rate control
-        if (currentTime - this.lastFrameTime < this.frameInterval) {
-            this.animationFrameId = requestAnimationFrame((time) => this.animate(time));
-            return;
-        }
-        this.lastFrameTime = currentTime;
-        
-        this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
-        
-        // Update and draw particles
-        this.particles = this.particles.filter(particle => {
-            particle.update();
-            particle.draw(this.ctx);
-            if (particle.life <= 0) {
-                this.recycleParticle(particle);
-                return false;
-            }
-            return true;
-        });
-        
-        // Update and draw bubbles
-        this.bubbles = this.bubbles.filter(bubble => {
-            if (bubble.y + bubble.radius < 0) {
-                return false;
-            }
-            bubble.update();
-            bubble.draw(this.ctx);
-            return true;
-        });
-        
-        // Adjust game difficulty based on score
-        const speedMultiplier = 1 + (Math.floor(this.score / this.gameSettings.difficulty.speedIncreaseInterval) * 
-            this.gameSettings.difficulty.speedIncrease);
-        
-        this.bubbles.forEach(bubble => {
-            bubble.speed = Math.min(
-                this.gameSettings.difficulty.maxSpeed,
-                this.gameSettings.difficulty.initialSpeed * speedMultiplier
-            );
-        });
-        
-        // Adjust bubble spawn interval
-        const spawnInterval = Math.max(
-            this.gameSettings.difficulty.bubbleInterval.min,
-            this.gameSettings.difficulty.bubbleInterval.initial - 
-            (Math.floor(this.score / this.gameSettings.difficulty.speedIncreaseInterval) * 50)
-        );
-        
-        if (currentTime - this.lastBubbleTime > spawnInterval) {
-            this.bubbles.push(this.createBubble());
-            this.lastBubbleTime = currentTime;
-        }
-        
-        this.animationFrameId = requestAnimationFrame((time) => this.animate(time));
-    }
-    
-    handleClick(x, y) {
-        if (!this.isPlaying || this.isPaused) return;
-        
-        let hitBubble = false;
-        const currentTime = Date.now();
-        
-        // Update combo
-        if (currentTime - this.lastBubblePopTime > this.comboTimeout) {
-            this.combo = 0;
-        }
-        this.combo++;
-        this.lastBubblePopTime = currentTime;
-        
-        // Calculate combo multiplier
-        const comboMultiplier = Math.min(
-            this.gameSettings.scoring.comboMultiplier.maxMultiplier,
-            Math.floor(this.combo / this.gameSettings.scoring.comboMultiplier.threshold) + 1
-        );
-        
-        // Add visual feedback for touch
-        if (this.isMobile) {
-            this.createTouchFeedback(x, y);
-        }
-        
-        this.bubbles = this.bubbles.filter(bubble => {
-            if (!bubble || typeof bubble.x !== 'number' || typeof bubble.y !== 'number') return false;
-            
-            const dx = x - bubble.x;
-            const dy = y - bubble.y;
-            const distance = Math.sqrt(dx * dx + dy * dy);
-            
-            const hitRadius = this.isMobile ? bubble.radius * 2.5 : bubble.radius * 1.5;
-            
-            if (distance <= hitRadius) {
-                hitBubble = true;
-                const basePoints = this.powerUps.doublePoints.active ? bubble.points * 2 : bubble.points;
-                const finalPoints = basePoints * comboMultiplier;
-                this.score += finalPoints;
-                this.scoreElement.textContent = this.score;
-                
-                this.showPointsPopup(bubble.x, bubble.y, finalPoints);
-                
-                if (this.score > this.highScore) {
-                    this.highScore = this.score;
-                    this.highScoreElement.textContent = this.highScore;
-                    localStorage.setItem('highScore', this.highScore);
-                }
-                
-                this.createPopEffect(bubble);
-                return false;
-            }
-            return true;
-        });
-        
-        if (hitBubble && navigator.vibrate) {
-            navigator.vibrate(50);
         }
     }
     
@@ -714,52 +764,6 @@ class Game {
         this.pauseButton.style.display = 'none';
         this.gameOverlay.style.display = 'flex';
         cancelAnimationFrame(this.animationFrameId);
-    }
-    
-    resizeCanvas() {
-        const rect = this.canvas.getBoundingClientRect();
-        const dpr = window.devicePixelRatio || 1;
-        
-        this.canvas.width = rect.width * dpr;
-        this.canvas.height = rect.height * dpr;
-        
-        // Scale context for retina displays
-        this.ctx.scale(dpr, dpr);
-        
-        // Clear any existing bubbles and reset
-        if (this.isPlaying) {
-            this.bubbles = [];
-            this.lastBubbleTime = Date.now();
-        }
-    }
-    
-    adjustBubblePositions() {
-        const usableWidth = this.canvas.width * 0.6;
-        const margin = (this.canvas.width - usableWidth) / 2;
-        
-        this.bubbles.forEach(bubble => {
-            if (bubble.x < margin) {
-                bubble.x = margin + bubble.radius;
-            } else if (bubble.x > this.canvas.width - margin) {
-                bubble.x = this.canvas.width - margin - bubble.radius;
-            }
-        });
-    }
-    
-    createStarryBackground() {
-        const starsContainer = document.querySelector('.stars');
-        const numberOfStars = 100;
-        
-        for (let i = 0; i < numberOfStars; i++) {
-            const star = document.createElement('div');
-            star.className = 'star';
-            star.style.left = `${Math.random() * 100}%`;
-            star.style.top = `${Math.random() * 100}%`;
-            star.style.width = `${Math.random() * 2 + 1}px`;
-            star.style.height = star.style.width;
-            star.style.setProperty('--twinkle-duration', `${Math.random() * 3 + 2}s`);
-            starsContainer.appendChild(star);
-        }
     }
 
     activatePowerUp(powerUp) {
