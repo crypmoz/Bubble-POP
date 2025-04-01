@@ -13,6 +13,7 @@ html, body {
     height: 100%;
     overflow: hidden;
     position: fixed;
+    background: linear-gradient(to bottom, #000000, #1a237e);
 }
 
 body {
@@ -29,6 +30,7 @@ body {
     display: flex;
     flex-direction: column;
     align-items: center;
+    background: linear-gradient(to bottom, #000000, #1a237e);
 }
 
 .game-title {
@@ -147,6 +149,18 @@ body {
 
 /* Mobile Styles */
 @media (max-width: 768px) {
+    html, body {
+        background: linear-gradient(to bottom, #000000, #1a237e);
+    }
+
+    body {
+        background: linear-gradient(to bottom, #000000, #1a237e);
+    }
+
+    .game-container {
+        background: linear-gradient(to bottom, #000000, #1a237e);
+    }
+
     .game-title {
         font-size: 2em;
     }
@@ -171,14 +185,22 @@ body {
         min-width: 70px;
         font-size: 0.9em;
     }
-
-    body {
-        background: linear-gradient(to bottom, #000000, #1a237e);
-    }
 }
 
 /* Landscape mode */
 @media (orientation: landscape) and (max-height: 500px) {
+    html, body {
+        background: linear-gradient(to bottom, #000000, #1a237e);
+    }
+
+    body {
+        background: linear-gradient(to bottom, #000000, #1a237e);
+    }
+
+    .game-container {
+        background: linear-gradient(to bottom, #000000, #1a237e);
+    }
+
     .game-title {
         font-size: 1.5em;
     }
@@ -202,10 +224,6 @@ body {
         padding: 4px 10px;
         min-width: 60px;
         font-size: 0.8em;
-    }
-
-    body {
-        background: linear-gradient(to bottom, #000000, #1a237e);
     }
 }
 
