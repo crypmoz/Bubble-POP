@@ -327,11 +327,17 @@ class Game {
             
             const zenButton = document.createElement('button');
             zenButton.textContent = 'Zen';
-            zenButton.addEventListener('click', () => this.setGameMode('zen'));
+            zenButton.addEventListener('click', () => {
+                this.setGameMode('zen');
+                if (!this.isPlaying) this.startGame();
+            });
             
             const fastButton = document.createElement('button');
             fastButton.textContent = 'Fast';
-            fastButton.addEventListener('click', () => this.setGameMode('fast'));
+            fastButton.addEventListener('click', () => {
+                this.setGameMode('fast');
+                if (!this.isPlaying) this.startGame();
+            });
             
             this.modeSelector.appendChild(zenButton);
             this.modeSelector.appendChild(fastButton);
@@ -345,15 +351,6 @@ class Game {
             document.body.appendChild(this.pauseButton);
             this.pauseButton.style.display = 'none';
             this.pauseButton.addEventListener('click', () => this.togglePause());
-        }
-
-        // Create start button if it doesn't exist
-        if (!this.startButton) {
-            this.startButton = document.createElement('button');
-            this.startButton.id = 'startButton';
-            this.startButton.textContent = 'Start Game';
-            document.body.appendChild(this.startButton);
-            this.startButton.addEventListener('click', () => this.startGame());
         }
     }
 
@@ -405,10 +402,14 @@ class Game {
         this.config.bubble.maxSpeed = settings.maxSpeed;
         this.config.bubble.maxBubbles = settings.maxBubbles;
         
-        document.querySelectorAll('.mode-button').forEach(button => {
-            button.classList.toggle('active', button.getAttribute('data-mode') === mode);
+        // Update button states
+        const buttons = this.modeSelector.querySelectorAll('button');
+        buttons.forEach(button => {
+            button.style.background = button.textContent.toLowerCase().includes(mode) ? 
+                'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.6)';
         });
 
+        // Update bubble speeds
         this.bubbles.forEach(bubble => bubble.speed = settings.baseSpeed);
     }
 
@@ -639,14 +640,11 @@ class Game {
         });
         this.config.bubble.maxBubbles = this.modes[this.currentMode].maxBubbles;
         
-        // Show/hide appropriate buttons
-        if (this.startButton) this.startButton.style.display = 'none';
+        // Show pause button
         if (this.pauseButton) {
-            this.pauseButton.style.display = 'block';
-            this.pauseButton.style.backgroundColor = 'rgba(0, 0, 0, 0.7)';
-            this.pauseButton.textContent = 'Pause';
+            this.pauseButton.style.display = 'flex';
+            this.pauseButton.classList.remove('paused');
         }
-        if (this.gameOverlay) this.gameOverlay.style.display = 'none';
         
         // Start animation
         this.animate(performance.now());
