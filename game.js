@@ -283,14 +283,37 @@ class Game {
         this.particles = [];
         this.lastBubbleTime = 0;
         
-        // Basic game settings
+        // Game modes configuration
+        this.modes = {
+            zen: {
+                spawnInterval: 1000,
+                minSpawnInterval: 800,
+                baseSpeed: 1.5,
+                maxSpeed: 2.5,
+                negativeBubbleChance: 0.05,
+                maxBubbles: 10
+            },
+            fast: {
+                spawnInterval: 500,
+                minSpawnInterval: 300,
+                baseSpeed: 2.5,
+                maxSpeed: 4,
+                negativeBubbleChance: 0.2,
+                maxBubbles: 15
+            }
+        };
+        
+        // Current game settings
         this.config = {
             bubble: {
                 minSize: 20,
                 maxSize: 40,
-                spawnInterval: 1000,
-                minSpawnInterval: 500,
-                baseSpeed: 1.5
+                spawnInterval: this.modes.zen.spawnInterval,
+                minSpawnInterval: this.modes.zen.minSpawnInterval,
+                baseSpeed: this.modes.zen.baseSpeed,
+                maxSpeed: this.modes.zen.maxSpeed,
+                negativeBubbleChance: this.modes.zen.negativeBubbleChance,
+                maxBubbles: this.modes.zen.maxBubbles
             },
             hitArea: {
                 multiplier: 1.2
@@ -304,27 +327,8 @@ class Game {
         this.highScoreElement = document.getElementById('highScore');
         this.gameOverlay = document.getElementById('gameOverlay');
         
-        // Initialize power-ups with labels
-        this.powerUps = {
-            shield: { 
-                element: document.getElementById('shield'), 
-                active: false,
-                label: 'Shield (Blocks Negative Points)',
-                icon: '🛡️'
-            },
-            slowMotion: { 
-                element: document.getElementById('slowMotion'), 
-                active: false,
-                label: 'Slow Motion',
-                icon: '⏱️'
-            },
-            doublePoints: { 
-                element: document.getElementById('doublePoints'), 
-                active: false,
-                label: 'Double Points',
-                icon: '2️⃣'
-            }
-        };
+        // Create mode selector
+        this.createModeSelector();
         
         // Set up event listeners
         this.setupEventListeners();
@@ -335,6 +339,117 @@ class Game {
         // Initial setup
         this.resizeCanvas();
         this.highScoreElement.textContent = this.highScore;
+        this.currentMode = 'zen';
+    }
+
+    createModeSelector() {
+        // Remove old power-ups if they exist
+        const oldPowerUps = document.querySelector('.power-ups');
+        if (oldPowerUps) {
+            oldPowerUps.remove();
+        }
+
+        // Create mode selector
+        const modeSelector = document.createElement('div');
+        modeSelector.className = 'mode-selector';
+
+        const zenButton = document.createElement('button');
+        zenButton.className = 'mode-button active';
+        zenButton.textContent = 'Zen Mode';
+        zenButton.onclick = () => this.setGameMode('zen');
+
+        const fastButton = document.createElement('button');
+        fastButton.className = 'mode-button';
+        fastButton.textContent = 'Fast Mode';
+        fastButton.onclick = () => this.setGameMode('fast');
+
+        modeSelector.appendChild(zenButton);
+        modeSelector.appendChild(fastButton);
+        document.body.appendChild(modeSelector);
+    }
+
+    setGameMode(mode) {
+        this.currentMode = mode;
+        const settings = this.modes[mode];
+        
+        // Update config with mode settings
+        this.config.bubble.spawnInterval = settings.spawnInterval;
+        this.config.bubble.minSpawnInterval = settings.minSpawnInterval;
+        this.config.bubble.baseSpeed = settings.baseSpeed;
+        this.config.bubble.maxSpeed = settings.maxSpeed;
+        this.config.bubble.negativeBubbleChance = settings.negativeBubbleChance;
+        this.config.bubble.maxBubbles = settings.maxBubbles;
+
+        // Update button states
+        const buttons = document.querySelectorAll('.mode-button');
+        buttons.forEach(button => {
+            button.classList.remove('active');
+            if (button.textContent.toLowerCase().includes(mode)) {
+                button.classList.add('active');
+            }
+        });
+
+        // Restart game if already playing
+        if (this.isPlaying) {
+            this.startGame();
+        }
+    }
+
+    createBubble() {
+        const minSize = this.config.bubble.minSize;
+        const maxSize = this.config.bubble.maxSize;
+        const radius = Math.random() * (maxSize - minSize) + minSize;
+        
+        const x = Math.random() * (this.canvas.width - radius * 2) + radius;
+        const y = this.canvas.height + radius;
+        
+        const bubble = new Bubble(x, y, radius, this.getRandomColor());
+        bubble.speed = this.config.bubble.baseSpeed;
+        bubble.canvas = this.canvas;
+        
+        // Set bubble points based on game mode
+        if (Math.random() < this.config.bubble.negativeBubbleChance) {
+            bubble.points = -5;
+            bubble.color = '#FF0000'; // Red for negative bubbles
+        }
+        
+        return bubble;
+    }
+
+    animate(currentTime) {
+        if (!this.isPlaying || this.isPaused) return;
+
+        this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+
+        // Update and draw particles
+        this.particles = this.particles.filter(particle => {
+            particle.update();
+            particle.draw(this.ctx);
+            return particle.life > 0;
+        });
+
+        // Update and draw bubbles
+        this.bubbles = this.bubbles.filter(bubble => {
+            if (bubble.y + bubble.radius < 0) return false;
+            bubble.update();
+            bubble.draw(this.ctx);
+            return true;
+        });
+
+        // Spawn new bubbles if under max limit
+        if (currentTime - this.lastBubbleTime > this.config.bubble.spawnInterval && 
+            this.bubbles.length < this.config.bubble.maxBubbles) {
+            this.bubbles.push(this.createBubble());
+            this.lastBubbleTime = currentTime;
+            
+            // Increase difficulty
+            this.config.bubble.spawnInterval = Math.max(
+                this.config.bubble.minSpawnInterval,
+                this.config.bubble.spawnInterval - 10
+            );
+        }
+
+        this.animationFrameId = requestAnimationFrame((time) => this.animate(time));
     }
 
     createStarryBackground() {
@@ -395,28 +510,6 @@ class Game {
             this.resizeCanvas();
         });
 
-        // Set up power-up click handlers with tooltips
-        Object.entries(this.powerUps).forEach(([key, powerUp]) => {
-            powerUp.element.setAttribute('data-tooltip', powerUp.label);
-            powerUp.element.innerHTML = powerUp.icon;
-            
-            powerUp.element.addEventListener('click', (e) => {
-                e.preventDefault();
-                this.activatePowerUp(key);
-            });
-
-            // Mobile tooltip handling
-            powerUp.element.addEventListener('touchstart', (e) => {
-                e.preventDefault();
-                const tooltip = powerUp.element.getAttribute('data-tooltip');
-                powerUp.element.classList.add('tooltip-visible');
-                
-                setTimeout(() => {
-                    powerUp.element.classList.remove('tooltip-visible');
-                }, 2000);
-            }, { passive: false });
-        });
-
         // Game control buttons
         this.startButton.addEventListener('click', () => this.startGame());
         this.pauseButton.addEventListener('click', () => this.togglePause());
@@ -454,56 +547,6 @@ class Game {
         }
     }
 
-    createBubble() {
-        const minSize = this.config.bubble.minSize;
-        const maxSize = this.config.bubble.maxSize;
-        const radius = Math.random() * (maxSize - minSize) + minSize;
-        
-        const x = Math.random() * (this.canvas.width - radius * 2) + radius;
-        const y = this.canvas.height + radius;
-        
-        const bubble = new Bubble(x, y, radius, this.getRandomColor());
-        bubble.speed = this.config.bubble.baseSpeed;
-        bubble.canvas = this.canvas;
-        
-        return bubble;
-    }
-
-    animate(currentTime) {
-        if (!this.isPlaying || this.isPaused) return;
-
-        this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
-
-        // Update and draw particles
-        this.particles = this.particles.filter(particle => {
-            particle.update();
-            particle.draw(this.ctx);
-            return particle.life > 0;
-        });
-
-        // Update and draw bubbles
-        this.bubbles = this.bubbles.filter(bubble => {
-            if (bubble.y + bubble.radius < 0) return false;
-            bubble.update();
-            bubble.draw(this.ctx);
-            return true;
-        });
-
-        // Spawn new bubbles
-        if (currentTime - this.lastBubbleTime > this.config.bubble.spawnInterval) {
-            this.bubbles.push(this.createBubble());
-            this.lastBubbleTime = currentTime;
-            
-            // Increase difficulty
-            this.config.bubble.spawnInterval = Math.max(
-                this.config.bubble.minSpawnInterval,
-                this.config.bubble.spawnInterval - 10
-            );
-        }
-
-        this.animationFrameId = requestAnimationFrame((time) => this.animate(time));
-    }
-
     createPopEffect(bubble) {
         for (let i = 0; i < 8; i++) {
             this.particles.push(new Particle(bubble.x, bubble.y, bubble.color));
@@ -523,7 +566,7 @@ class Game {
         this.bubbles = [];
         this.particles = [];
         this.isPaused = false;
-        this.config.bubble.spawnInterval = 1000;
+        this.config.bubble.spawnInterval = this.config.bubble.spawnInterval;
         
         this.startButton.style.display = 'none';
         this.pauseButton.style.display = 'inline-block';
@@ -545,18 +588,6 @@ class Game {
             this.gameOverlay.style.display = 'none';
             this.animate(0);
         }
-    }
-
-    activatePowerUp(powerUp) {
-        if (this.powerUps[powerUp].active) return;
-        
-        this.powerUps[powerUp].active = true;
-        this.powerUps[powerUp].element.classList.add('active');
-        
-        setTimeout(() => {
-            this.powerUps[powerUp].active = false;
-            this.powerUps[powerUp].element.classList.remove('active');
-        }, 10000);
     }
 
     getRandomColor() {
