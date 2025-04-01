@@ -253,6 +253,8 @@ class Game {
         this.lastBubbleTime = 0;
         this.gameStartTime = 0;
         this.lastBubbleIncreaseTime = 0;
+        this.BUBBLE_INCREASE_INTERVAL = 10000; // 10 seconds
+        this.lastFrameTime = 0;
         
         this.modes = {
             zen: {
@@ -395,22 +397,33 @@ class Game {
     }
 
     animate(currentTime) {
-        if (!this.isPlaying || this.isPaused) return;
+        if (!this.isPlaying) return;
+        if (this.isPaused) {
+            // If paused, just keep requesting frames but don't update game state
+            this.animationFrameId = requestAnimationFrame((time) => this.animate(time));
+            return;
+        }
+
+        // Calculate delta time for smooth animations
+        const deltaTime = this.lastFrameTime ? (currentTime - this.lastFrameTime) / 1000 : 0;
+        this.lastFrameTime = currentTime;
 
         this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
 
         const currentGameTime = Date.now();
-        if (currentGameTime - this.lastBubbleIncreaseTime >= 90000) {
+        if (currentGameTime - this.lastBubbleIncreaseTime >= this.BUBBLE_INCREASE_INTERVAL) {
             this.increaseBubbleCount();
             this.lastBubbleIncreaseTime = currentGameTime;
         }
 
+        // Update particles with delta time
         this.particles = this.particles.filter(particle => {
             particle.update();
             particle.draw(this.ctx);
             return particle.life > 0;
         });
 
+        // Update bubbles with delta time
         this.bubbles = this.bubbles.filter(bubble => {
             if (bubble.y + bubble.radius < 0) return false;
             bubble.update();
@@ -524,38 +537,52 @@ class Game {
 
     startGame() {
         this.isPlaying = true;
+        this.isPaused = false;
         this.score = 0;
         this.scoreElement.textContent = '0';
         this.bubbles = [];
         this.particles = [];
-        this.isPaused = false;
+        this.lastFrameTime = 0;
         this.gameStartTime = Date.now();
         this.lastBubbleIncreaseTime = this.gameStartTime;
         
+        // Reset bubble counts
         Object.keys(this.modes).forEach(mode => {
             this.modes[mode].maxBubbles = this.modes[mode].baseMaxBubbles;
         });
-        this.config.bubble.maxBubbles = this.modes.zen.maxBubbles;
+        this.config.bubble.maxBubbles = this.modes[this.currentMode].maxBubbles;
         
-        this.startButton.style.display = 'none';
-        this.pauseButton.style.display = 'inline-block';
-        this.gameOverlay.style.display = 'none';
+        // Show/hide appropriate buttons
+        if (this.startButton) this.startButton.style.display = 'none';
+        if (this.pauseButton) {
+            this.pauseButton.style.display = 'block';
+            this.pauseButton.style.backgroundColor = 'rgba(0, 0, 0, 0.7)';
+            this.pauseButton.textContent = 'Pause';
+        }
+        if (this.gameOverlay) this.gameOverlay.style.display = 'none';
         
-        this.animate(0);
+        // Start animation
+        this.animate(performance.now());
     }
 
     togglePause() {
         if (!this.isPlaying) return;
         
         this.isPaused = !this.isPaused;
-        this.pauseButton.textContent = this.isPaused ? 'Resume' : 'Pause';
         
-        if (this.isPaused) {
-            cancelAnimationFrame(this.animationFrameId);
-            this.gameOverlay.style.display = 'flex';
-        } else {
-            this.gameOverlay.style.display = 'none';
-            this.animate(0);
+        if (this.pauseButton) {
+            this.pauseButton.textContent = this.isPaused ? 'Resume' : 'Pause';
+            this.pauseButton.style.backgroundColor = this.isPaused ? 'rgba(0, 255, 0, 0.7)' : 'rgba(0, 0, 0, 0.7)';
+        }
+        
+        if (this.gameOverlay) {
+            this.gameOverlay.style.display = this.isPaused ? 'flex' : 'none';
+        }
+        
+        if (!this.isPaused) {
+            // Reset last frame time when resuming to prevent large delta time
+            this.lastFrameTime = 0;
+            this.animate(performance.now());
         }
     }
 
