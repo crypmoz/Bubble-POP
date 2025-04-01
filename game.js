@@ -621,11 +621,11 @@ class Game {
             this.modeSelector.className = 'mode-selector';
             
             const zenButton = document.createElement('button');
-            zenButton.textContent = 'Zen Mode';
+            zenButton.textContent = 'Zen';
             zenButton.addEventListener('click', () => this.setGameMode('zen'));
             
             const fastButton = document.createElement('button');
-            fastButton.textContent = 'Fast Mode';
+            fastButton.textContent = 'Fast';
             fastButton.addEventListener('click', () => this.setGameMode('fast'));
             
             this.modeSelector.appendChild(zenButton);
