@@ -31,59 +31,49 @@ class Particle {
 }
 
 class Bubble {
-    constructor(x, y, radius, color, speedX, speedY) {
+    constructor(x, y, radius, color) {
         this.x = x;
         this.y = y;
         this.radius = radius;
         this.color = color;
-        this.speedX = speedX;
-        this.speedY = speedY;
-        this.isPopped = false;
-        this.popProgress = 0;
+        this.speed = 1;
+        this.points = 1;
+        
+        // Random chance for negative bubble
+        if (Math.random() < 0.1) {
+            this.points = -5;
+            this.color = '#FF0000';
+        }
     }
 
-    update(deltaTime) {
-        if (this.isPopped) {
-            this.popProgress += deltaTime * 0.005;
-            return this.popProgress >= 1;
-        }
-
-        this.x += this.speedX * deltaTime;
-        this.y += this.speedY * deltaTime;
-
-        if (this.x - this.radius < 0 || this.x + this.radius > window.innerWidth) {
-            this.speedX = -this.speedX;
-            this.x = Math.max(this.radius, Math.min(window.innerWidth - this.radius, this.x));
-        }
-        if (this.y - this.radius < 0 || this.y + this.radius > window.innerHeight) {
-            this.speedY = -this.speedY;
-            this.y = Math.max(this.radius, Math.min(window.innerHeight - this.radius, this.y));
-        }
-
-        return false;
+    update() {
+        this.y -= this.speed;
     }
 
     draw(ctx) {
         ctx.beginPath();
-        if (this.isPopped) {
-            ctx.globalAlpha = 1 - this.popProgress;
-            ctx.arc(this.x, this.y, this.radius * (1 + this.popProgress), 0, Math.PI * 2);
-        } else {
-            ctx.globalAlpha = 1;
-            ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
-        }
-        ctx.fillStyle = this.color;
+        ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+        
+        // Create gradient for 3D effect
+        const gradient = ctx.createRadialGradient(
+            this.x - this.radius * 0.3,
+            this.y - this.radius * 0.3,
+            0,
+            this.x,
+            this.y,
+            this.radius
+        );
+        gradient.addColorStop(0, 'rgba(255, 255, 255, 0.8)');
+        gradient.addColorStop(0.5, this.color);
+        gradient.addColorStop(1, this.color);
+        
+        ctx.fillStyle = gradient;
         ctx.fill();
-        ctx.globalAlpha = 1;
     }
 
-    contains(x, y) {
-        const distance = Math.sqrt((this.x - x) ** 2 + (this.y - y) ** 2);
-        return distance <= this.radius;
-    }
-
-    pop() {
-        this.isPopped = true;
+    isClicked(x, y) {
+        const distance = Math.sqrt(Math.pow(x - this.x, 2) + Math.pow(y - this.y, 2));
+        return distance <= this.radius * 1.2;
     }
 }
 
@@ -269,8 +259,7 @@ class Game {
         });
 
         // Update bubble speeds
-        this.bubbles.forEach(bubble => bubble.speedX = Math.cos(Math.random() * Math.PI * 2) * settings.baseSpeed);
-        this.bubbles.forEach(bubble => bubble.speedY = Math.sin(Math.random() * Math.PI * 2) * settings.baseSpeed);
+        this.bubbles.forEach(bubble => bubble.speed = Math.cos(Math.random() * Math.PI * 2) * settings.baseSpeed);
         
         // Start game if not playing
         if (!this.isPlaying) {
@@ -335,7 +324,7 @@ class Game {
         
         const color = this.bubbleColors[Math.floor(Math.random() * this.bubbleColors.length)];
         
-        return new Bubble(x, y, radius, color, speedX, speedY);
+        return new Bubble(x, y, radius, color);
     }
 
     animate(currentTime) {
@@ -368,7 +357,7 @@ class Game {
         // Update bubbles with delta time
         this.bubbles = this.bubbles.filter(bubble => {
             if (bubble.y + bubble.radius < 0) return false;
-            bubble.update(deltaTime);
+            bubble.update();
             bubble.draw(this.ctx);
             return true;
         });

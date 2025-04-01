@@ -8,40 +8,52 @@
     user-select: none;
 }
 
-body {
-    background: #000;
-    color: #fff;
-    font-family: Arial, sans-serif;
+html, body {
+    width: 100%;
+    height: 100%;
     overflow: hidden;
-    height: 100vh;
-    width: 100vw;
     position: fixed;
+}
+
+body {
+    background: linear-gradient(to bottom, #000000, #1a237e);
+    font-family: Arial, sans-serif;
 }
 
 .game-container {
     position: relative;
     width: 100%;
-    height: 100%;
+    height: 100vh;
+    max-width: 800px;
+    margin: 0 auto;
     display: flex;
     flex-direction: column;
     align-items: center;
 }
 
 .game-title {
-    font-size: 2.5rem;
-    text-align: center;
-    margin: 1rem 0;
-    color: #fff;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    color: white;
+    font-size: 2.5em;
     text-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
+    opacity: 0.2;
+    pointer-events: none;
+    z-index: 0;
 }
 
 .score-container {
     position: fixed;
-    top: 20px;
-    right: 20px;
-    font-size: 1.2rem;
-    text-align: right;
-    z-index: 100;
+    top: max(20px, env(safe-area-inset-top));
+    left: max(20px, env(safe-area-inset-left));
+    background: rgba(0, 0, 0, 0.7);
+    padding: 10px 20px;
+    border-radius: 15px;
+    color: white;
+    font-size: 1.2em;
+    z-index: 2;
 }
 
 #gameCanvas {
@@ -53,61 +65,71 @@ body {
     z-index: 1;
 }
 
-.mode-selector {
+#startButton {
     position: fixed;
-    bottom: 100px;
+    bottom: max(20px, env(safe-area-inset-bottom));
     left: 50%;
     transform: translateX(-50%);
-    display: flex;
-    gap: 1rem;
-    z-index: 100;
-}
-
-.mode-selector button {
-    padding: 0.8rem 1.5rem;
-    font-size: 1.2rem;
-    border: 2px solid #fff;
-    background: transparent;
-    color: #fff;
-    cursor: pointer;
+    background: rgba(0, 0, 0, 0.7);
+    color: white;
+    border: none;
+    padding: 15px 30px;
     border-radius: 25px;
+    font-size: 1.2em;
+    cursor: pointer;
+    z-index: 2;
     transition: all 0.3s ease;
 }
 
-.mode-selector button:hover {
+#startButton:hover {
     background: rgba(255, 255, 255, 0.2);
-}
-
-.mode-selector button.active {
-    background: #fff;
-    color: #000;
 }
 
 #pauseButton {
     position: fixed;
-    bottom: 30px;
-    left: 50%;
-    transform: translateX(-50%);
-    width: 50px;
-    height: 50px;
-    border-radius: 50%;
-    background: #fff;
+    bottom: max(20px, env(safe-area-inset-bottom));
+    right: max(20px, env(safe-area-inset-right));
+    background: rgba(0, 0, 0, 0.7);
+    color: white;
     border: none;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
     cursor: pointer;
-    z-index: 100;
+    z-index: 2;
+    display: none;
+    justify-content: center;
+    align-items: center;
     transition: all 0.3s ease;
 }
 
 #pauseButton:hover {
-    transform: translateX(-50%) scale(1.1);
+    background: rgba(255, 255, 255, 0.2);
+}
+
+#pauseButton:active {
+    transform: scale(0.95);
+}
+
+#pauseButton::before {
+    content: "⏸️";
+    font-size: 1.2em;
+    line-height: 1;
+}
+
+#pauseButton.paused::before {
+    content: "▶️";
 }
 
 /* Stars background */
 .stars {
     position: fixed;
+    top: 0;
+    left: 0;
     width: 100%;
     height: 100%;
     z-index: 0;
+    pointer-events: none;
 }
 
 .star {
@@ -125,47 +147,44 @@ body {
 /* Mobile Styles */
 @media (max-width: 768px) {
     .game-title {
-        font-size: 2rem;
-        margin: 0.5rem 0;
-    }
-
-    .mode-selector {
-        bottom: 80px;
-    }
-
-    .mode-selector button {
-        padding: 0.6rem 1.2rem;
-        font-size: 1rem;
-    }
-
-    #pauseButton {
-        bottom: 20px;
-        width: 40px;
-        height: 40px;
+        font-size: 2em;
     }
 
     .score-container {
-        font-size: 1rem;
-        top: 10px;
-        right: 10px;
+        font-size: 1em;
+        padding: 8px 16px;
+    }
+
+    #startButton {
+        padding: 12px 24px;
+        font-size: 1.1em;
+    }
+
+    #pauseButton {
+        width: 36px;
+        height: 36px;
     }
 }
 
 /* Landscape mode */
-@media (max-height: 500px) and (orientation: landscape) {
+@media (orientation: landscape) and (max-height: 500px) {
     .game-title {
-        font-size: 1.5rem;
-        margin: 0.3rem 0;
+        font-size: 1.5em;
     }
 
-    .mode-selector {
-        bottom: 60px;
+    .score-container {
+        font-size: 0.9em;
+        padding: 6px 12px;
+    }
+
+    #startButton {
+        padding: 10px 20px;
+        font-size: 1em;
     }
 
     #pauseButton {
-        bottom: 10px;
-        width: 35px;
-        height: 35px;
+        width: 32px;
+        height: 32px;
     }
 }
 
