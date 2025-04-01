@@ -141,19 +141,48 @@ class Game {
             e.preventDefault();
             const touch = e.touches[0];
             const rect = this.canvas.getBoundingClientRect();
+            const scaleX = this.canvas.width / rect.width;
+            const scaleY = this.canvas.height / rect.height;
+            
             this.handleClick({
-                clientX: touch.clientX - rect.left,
-                clientY: touch.clientY - rect.top
+                clientX: (touch.clientX - rect.left) * scaleX,
+                clientY: (touch.clientY - rect.top) * scaleY
             });
+        }, { passive: false });
+
+        // Handle window resize
+        window.addEventListener('resize', () => {
+            this.resizeCanvas();
+            // Recalculate bubble positions if game is running
+            if (this.isPlaying) {
+                this.bubbles.forEach(bubble => {
+                    bubble.x = Math.min(bubble.x, this.canvas.width - bubble.radius);
+                    bubble.y = Math.min(bubble.y, this.canvas.height - bubble.radius);
+                });
+            }
         });
+
+        // Prevent default touch behaviors
+        document.addEventListener('touchmove', (e) => {
+            if (this.isPlaying) {
+                e.preventDefault();
+            }
+        }, { passive: false });
 
         // Update high score display
         this.highScoreElement.textContent = this.highScore;
     }
 
     resizeCanvas() {
-        this.canvas.width = this.canvas.offsetWidth;
-        this.canvas.height = this.canvas.offsetHeight;
+        const rect = this.canvas.getBoundingClientRect();
+        this.canvas.width = rect.width;
+        this.canvas.height = rect.height;
+        
+        // Adjust bubble sizes based on screen size
+        const baseSize = Math.min(this.canvas.width, this.canvas.height) * 0.05;
+        this.bubbles.forEach(bubble => {
+            bubble.radius = Math.max(baseSize, Math.min(baseSize * 2, bubble.radius));
+        });
     }
 
     startGame() {
