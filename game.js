@@ -423,6 +423,8 @@ class Game {
 
     setupEventListeners() {
         const handleInteraction = (e) => {
+            if (!this.isPlaying || this.isPaused) return;
+            
             const rect = this.canvas.getBoundingClientRect();
             const scaleX = this.canvas.width / rect.width;
             const scaleY = this.canvas.height / rect.height;
@@ -491,6 +493,13 @@ class Game {
         const rect = this.canvas.getBoundingClientRect();
         this.canvas.width = rect.width;
         this.canvas.height = rect.height;
+        
+        // Ensure stars are visible on mobile
+        const stars = document.querySelector('.stars');
+        if (stars) {
+            stars.style.zIndex = '0';
+            this.canvas.style.zIndex = '1';
+        }
     }
 
     startGame() {
