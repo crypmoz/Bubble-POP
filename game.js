@@ -85,13 +85,21 @@ class Bubble {
             this.radius * 1.2
         );
 
-        // Parse the base color to RGB components
-        const baseRGB = this.hexToRgb(this.baseColor);
+        // Get RGB values based on color format
+        let rgb;
+        if (this.color.startsWith('#')) {
+            rgb = this.hexToRgb(this.color);
+        } else if (this.color.startsWith('hsl')) {
+            rgb = this.hslToRgb(this.color);
+        } else {
+            // Default color if parsing fails
+            rgb = { r: 100, g: 100, b: 255 };
+        }
         
         // Create highlight and shadow colors
         const highlightColor = `rgba(255, 255, 255, 0.8)`;
-        const mainColor = `rgba(${baseRGB.r}, ${baseRGB.g}, ${baseRGB.b}, ${this.glowIntensity})`;
-        const shadowColor = `rgba(${Math.max(0, baseRGB.r - 50)}, ${Math.max(0, baseRGB.g - 50)}, ${Math.max(0, baseRGB.b - 50)}, ${this.glowIntensity})`;
+        const mainColor = `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${this.glowIntensity})`;
+        const shadowColor = `rgba(${Math.max(0, rgb.r - 50)}, ${Math.max(0, rgb.g - 50)}, ${Math.max(0, rgb.b - 50)}, ${this.glowIntensity})`;
 
         gradient.addColorStop(0, highlightColor);
         gradient.addColorStop(0.4, mainColor);
@@ -134,6 +142,42 @@ class Bubble {
             g: parseInt(result[2], 16),
             b: parseInt(result[3], 16)
         } : null;
+    }
+
+    hslToRgb(hsl) {
+        const match = hsl.match(/hsl\((\d+),\s*(\d+)%,\s*(\d+)%\)/);
+        if (!match) return { r: 100, g: 100, b: 255 };
+
+        let h = parseInt(match[1]) / 360;
+        let s = parseInt(match[2]) / 100;
+        let l = parseInt(match[3]) / 100;
+
+        let r, g, b;
+
+        if (s === 0) {
+            r = g = b = l;
+        } else {
+            const hue2rgb = (p, q, t) => {
+                if (t < 0) t += 1;
+                if (t > 1) t -= 1;
+                if (t < 1/6) return p + (q - p) * 6 * t;
+                if (t < 1/2) return q;
+                if (t < 2/3) return p + (q - p) * (2/3 - t) * 6;
+                return p;
+            };
+
+            const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+            const p = 2 * l - q;
+            r = hue2rgb(p, q, h + 1/3);
+            g = hue2rgb(p, q, h);
+            b = hue2rgb(p, q, h - 1/3);
+        }
+
+        return {
+            r: Math.round(r * 255),
+            g: Math.round(g * 255),
+            b: Math.round(b * 255)
+        };
     }
 
     isClicked(x, y) {
@@ -235,13 +279,25 @@ class Game {
         const hue = Math.random() * 360;
         const color = `hsl(${hue}, 70%, 50%)`;
         
-        return new Bubble(x, y, radius, color);
+        const bubble = new Bubble(x, y, radius, color);
+        bubble.canvas = this.canvas; // Pass canvas reference to bubble
+        return bubble;
     }
     
     animate() {
         if (!this.isPlaying || this.isPaused) return;
         
-        this.animationFrameId = requestAnimationFrame(() => this.animate());
+        this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+        
+        // Update and draw bubbles
+        this.bubbles = this.bubbles.filter(bubble => {
+            if (bubble.y + bubble.radius < 0) {
+                return false; // Remove bubbles that are off screen
+            }
+            bubble.update();
+            bubble.draw(this.ctx);
+            return true;
+        });
         
         const currentTime = Date.now();
         if (currentTime - this.lastBubbleTime > this.bubbleInterval) {
@@ -249,17 +305,7 @@ class Game {
             this.lastBubbleTime = currentTime;
         }
         
-        this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
-        
-        this.bubbles = this.bubbles.filter(bubble => {
-            bubble.y -= bubble.speed;
-            bubble.draw(this.ctx);
-            return bubble.y + bubble.radius > 0;
-        });
-        
-        if (this.bubbles.length === 0) {
-            this.endGame();
-        }
+        this.animationFrameId = requestAnimationFrame(() => this.animate());
     }
     
     handleClick(event) {
