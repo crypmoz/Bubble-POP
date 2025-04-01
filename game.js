@@ -50,20 +50,20 @@ class Bubble {
             radius: this.radius * 0.8
         };
         
-        // Different bubble types with adjusted probabilities
+        // Set bubble type and points
         const random = Math.random();
-        if (random < 0.05) { // 5% chance for star bubble
+        if (random < 0.05) {
             this.type = 'star';
             this.points = 10;
-            this.specialColor = '#FFD700'; // Gold color for star
-        } else if (random < 0.1) { // 5% chance for bomb bubble
+            this.specialColor = '#FFD700';
+        } else if (random < 0.1) {
             this.type = 'bomb';
             this.points = -5;
-            this.specialColor = '#FF0000'; // Red color for bomb
-        } else if (random < 0.15) { // 5% chance for rainbow bubble
+            this.specialColor = '#FF0000';
+        } else if (random < 0.15) {
             this.type = 'rainbow';
             this.points = 5;
-            this.specialColor = null; // Rainbow effect handled separately
+            this.specialColor = null;
         } else {
             this.type = 'normal';
             this.points = 1;
@@ -83,7 +83,6 @@ class Bubble {
     }
 
     draw(ctx) {
-        // Create gradient for 3D effect
         const gradient = ctx.createRadialGradient(
             this.x + this.highlight.x,
             this.y + this.highlight.y,
@@ -93,34 +92,18 @@ class Bubble {
             this.radius * 1.2
         );
 
-        // Get RGB values based on color format
-        let rgb;
-        if (this.color.startsWith('#')) {
-            rgb = this.hexToRgb(this.color);
-        } else if (this.color.startsWith('hsl')) {
-            rgb = this.hslToRgb(this.color);
-        } else {
-            // Default color if parsing fails
-            rgb = { r: 100, g: 100, b: 255 };
-        }
+        const rgb = this.color.startsWith('#') ? this.hexToRgb(this.color) : 
+                    this.color.startsWith('hsl') ? this.hslToRgb(this.color) : 
+                    { r: 100, g: 100, b: 255 };
         
-        // Create highlight and shadow colors
-        const highlightColor = `rgba(255, 255, 255, 0.8)`;
-        const mainColor = `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${this.glowIntensity})`;
-        const shadowColor = `rgba(${Math.max(0, rgb.r - 50)}, ${Math.max(0, rgb.g - 50)}, ${Math.max(0, rgb.b - 50)}, ${this.glowIntensity})`;
+        gradient.addColorStop(0, 'rgba(255, 255, 255, 0.8)');
+        gradient.addColorStop(0.4, `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${this.glowIntensity})`);
+        gradient.addColorStop(1, `rgba(${Math.max(0, rgb.r - 50)}, ${Math.max(0, rgb.g - 50)}, ${Math.max(0, rgb.b - 50)}, ${this.glowIntensity})`);
 
-        gradient.addColorStop(0, highlightColor);
-        gradient.addColorStop(0.4, mainColor);
-        gradient.addColorStop(1, shadowColor);
-
-        // Draw special bubble effects
-        if (this.type === 'star') {
-            this.drawStarEffect(ctx);
-        } else if (this.type === 'bomb') {
-            this.drawBombEffect(ctx);
-        } else if (this.type === 'rainbow') {
-            this.drawRainbowEffect(ctx);
-        }
+        // Draw special effects
+        if (this.type === 'star') this.drawStarEffect(ctx);
+        else if (this.type === 'bomb') this.drawBombEffect(ctx);
+        else if (this.type === 'rainbow') this.drawRainbowEffect(ctx);
 
         // Draw main bubble
         ctx.beginPath();
@@ -141,13 +124,7 @@ class Bubble {
         shineGradient.addColorStop(1, 'rgba(255, 255, 255, 0)');
 
         ctx.beginPath();
-        ctx.arc(
-            this.x + this.highlight.x,
-            this.y + this.highlight.y,
-            this.highlight.radius,
-            0,
-            Math.PI * 2
-        );
+        ctx.arc(this.x + this.highlight.x, this.y + this.highlight.y, this.highlight.radius, 0, Math.PI * 2);
         ctx.fillStyle = shineGradient;
         ctx.fill();
     }
@@ -164,11 +141,8 @@ class Bubble {
             const x = this.x + Math.cos(angle) * radius;
             const y = this.y + Math.sin(angle) * radius;
             
-            if (i === 0) {
-                ctx.moveTo(x, y);
-            } else {
-                ctx.lineTo(x, y);
-            }
+            if (i === 0) ctx.moveTo(x, y);
+            else ctx.lineTo(x, y);
         }
         ctx.closePath();
         ctx.fillStyle = this.specialColor;
@@ -178,7 +152,6 @@ class Bubble {
     }
 
     drawBombEffect(ctx) {
-        // Draw fuse
         ctx.beginPath();
         ctx.moveTo(this.x + this.radius, this.y - this.radius * 0.5);
         ctx.lineTo(this.x + this.radius * 1.5, this.y - this.radius);
@@ -186,7 +159,6 @@ class Bubble {
         ctx.lineWidth = 2;
         ctx.stroke();
         
-        // Draw spark
         if (Math.random() < 0.3) {
             ctx.beginPath();
             ctx.arc(this.x + this.radius * 1.5, this.y - this.radius, 2, 0, Math.PI * 2);
@@ -263,10 +235,7 @@ class Bubble {
     }
 
     isClicked(x, y) {
-        const distance = Math.sqrt(
-            Math.pow(x - this.x, 2) + Math.pow(y - this.y, 2)
-        );
-        return distance <= this.radius;
+        return Math.sqrt(Math.pow(x - this.x, 2) + Math.pow(y - this.y, 2)) <= this.radius;
     }
 }
 
@@ -285,7 +254,6 @@ class Game {
         this.gameStartTime = 0;
         this.lastBubbleIncreaseTime = 0;
         
-        // Game modes configuration
         this.modes = {
             zen: {
                 spawnInterval: 1000,
@@ -307,7 +275,6 @@ class Game {
             }
         };
         
-        // Current game settings
         this.config = {
             bubble: {
                 minSize: 20,
@@ -319,56 +286,38 @@ class Game {
                 negativeBubbleChance: this.modes.zen.negativeBubbleChance,
                 maxBubbles: this.modes.zen.maxBubbles
             },
-            hitArea: {
-                multiplier: 1.2
-            }
+            hitArea: { multiplier: 1.2 }
         };
         
-        // Get DOM elements
         this.startButton = document.getElementById('startButton');
         this.pauseButton = document.getElementById('pauseButton');
         this.scoreElement = document.getElementById('score');
         this.highScoreElement = document.getElementById('highScore');
         this.gameOverlay = document.getElementById('gameOverlay');
         
-        // Create mode selector
         this.createModeSelector();
-        
-        // Set up event listeners
         this.setupEventListeners();
-        
-        // Create starry background
         this.createStarryBackground();
-        
-        // Initial setup
         this.resizeCanvas();
         this.highScoreElement.textContent = this.highScore;
         this.currentMode = 'zen';
     }
 
     createModeSelector() {
-        // Remove old power-ups if they exist
         const oldPowerUps = document.querySelector('.power-ups');
-        if (oldPowerUps) {
-            oldPowerUps.remove();
-        }
+        if (oldPowerUps) oldPowerUps.remove();
 
-        // Create mode selector
         const modeSelector = document.createElement('div');
         modeSelector.className = 'mode-selector';
 
-        const zenButton = document.createElement('button');
-        zenButton.className = 'mode-button active';
-        zenButton.textContent = 'Zen Mode';
-        zenButton.onclick = () => this.setGameMode('zen');
+        ['zen', 'fast'].forEach(mode => {
+            const button = document.createElement('button');
+            button.className = `mode-button ${mode === 'zen' ? 'active' : ''}`;
+            button.textContent = `${mode.charAt(0).toUpperCase() + mode.slice(1)} Mode`;
+            button.onclick = () => this.setGameMode(mode);
+            modeSelector.appendChild(button);
+        });
 
-        const fastButton = document.createElement('button');
-        fastButton.className = 'mode-button';
-        fastButton.textContent = 'Fast Mode';
-        fastButton.onclick = () => this.setGameMode('fast');
-
-        modeSelector.appendChild(zenButton);
-        modeSelector.appendChild(fastButton);
         document.body.appendChild(modeSelector);
     }
 
@@ -376,31 +325,19 @@ class Game {
         this.currentMode = mode;
         const settings = this.modes[mode];
         
-        // Update only speed-related settings without restarting the game
         this.config.bubble.baseSpeed = settings.baseSpeed;
         this.config.bubble.maxSpeed = settings.maxSpeed;
         this.config.bubble.maxBubbles = settings.maxBubbles;
         
-        // Update button states
-        const buttons = document.querySelectorAll('.mode-button');
-        buttons.forEach(button => {
-            button.classList.remove('active');
-            if (button.textContent.toLowerCase().includes(mode)) {
-                button.classList.add('active');
-            }
+        document.querySelectorAll('.mode-button').forEach(button => {
+            button.classList.toggle('active', button.textContent.toLowerCase().includes(mode));
         });
 
-        // Update existing bubbles' speed
-        this.bubbles.forEach(bubble => {
-            bubble.speed = settings.baseSpeed;
-        });
+        this.bubbles.forEach(bubble => bubble.speed = settings.baseSpeed);
     }
 
     createBubble() {
-        const minSize = this.config.bubble.minSize;
-        const maxSize = this.config.bubble.maxSize;
-        const radius = Math.random() * (maxSize - minSize) + minSize;
-        
+        const radius = Math.random() * (this.config.bubble.maxSize - this.config.bubble.minSize) + this.config.bubble.minSize;
         const x = Math.random() * (this.canvas.width - radius * 2) + radius;
         const y = this.canvas.height + radius;
         
@@ -408,10 +345,9 @@ class Game {
         bubble.speed = this.config.bubble.baseSpeed;
         bubble.canvas = this.canvas;
         
-        // Set bubble points based on game mode
         if (Math.random() < this.config.bubble.negativeBubbleChance) {
             bubble.points = -5;
-            bubble.color = '#FF0000'; // Red for negative bubbles
+            bubble.color = '#FF0000';
         }
         
         return bubble;
@@ -420,24 +356,20 @@ class Game {
     animate(currentTime) {
         if (!this.isPlaying || this.isPaused) return;
 
-        // Clear only the canvas area
         this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
 
-        // Check for bubble increase every 90 seconds
         const currentGameTime = Date.now();
-        if (currentGameTime - this.lastBubbleIncreaseTime >= 90000) { // 90 seconds
+        if (currentGameTime - this.lastBubbleIncreaseTime >= 90000) {
             this.increaseBubbleCount();
             this.lastBubbleIncreaseTime = currentGameTime;
         }
 
-        // Update and draw particles
         this.particles = this.particles.filter(particle => {
             particle.update();
             particle.draw(this.ctx);
             return particle.life > 0;
         });
 
-        // Update and draw bubbles
         this.bubbles = this.bubbles.filter(bubble => {
             if (bubble.y + bubble.radius < 0) return false;
             bubble.update();
@@ -445,7 +377,6 @@ class Game {
             return true;
         });
 
-        // Spawn new bubbles if under max limit
         if (currentTime - this.lastBubbleTime > this.config.bubble.spawnInterval && 
             this.bubbles.length < this.config.bubble.maxBubbles) {
             this.bubbles.push(this.createBubble());
@@ -456,46 +387,32 @@ class Game {
     }
 
     increaseBubbleCount() {
-        // Increase max bubbles by 5% for both modes
-        this.modes.zen.maxBubbles = Math.floor(this.modes.zen.maxBubbles * 1.05);
-        this.modes.fast.maxBubbles = Math.floor(this.modes.fast.maxBubbles * 1.05);
-        
-        // Update current mode's max bubbles
+        Object.keys(this.modes).forEach(mode => {
+            this.modes[mode].maxBubbles = Math.floor(this.modes[mode].maxBubbles * 1.05);
+        });
         this.config.bubble.maxBubbles = this.modes[this.currentMode].maxBubbles;
     }
 
     createStarryBackground() {
-        // Remove existing stars container if it exists
         const existingStars = document.querySelector('.stars');
-        if (existingStars) {
-            existingStars.remove();
-        }
+        if (existingStars) existingStars.remove();
 
-        // Create new stars container
         const container = document.createElement('div');
         container.className = 'stars';
         document.body.insertBefore(container, document.body.firstChild);
         
-        // Create more stars for better visibility
-        const numberOfStars = 300; // Increased number of stars
-        for (let i = 0; i < numberOfStars; i++) {
+        for (let i = 0; i < 300; i++) {
             const star = document.createElement('div');
             star.className = 'star';
             
-            // Distribute stars more evenly
-            const x = Math.random() * 100;
-            const y = Math.random() * 100;
+            star.style.left = `${Math.random() * 100}%`;
+            star.style.top = `${Math.random() * 100}%`;
             
-            // Vary star sizes more
-            const size = Math.random() * 4 + 2; // Larger stars (2-6px)
-            
-            star.style.left = `${x}%`;
-            star.style.top = `${y}%`;
+            const size = Math.random() * 4 + 2;
             star.style.width = `${size}px`;
             star.style.height = `${size}px`;
             
-            // Slower twinkle animation with longer duration
-            const duration = Math.random() * 4 + 6; // 6-10 seconds
+            const duration = Math.random() * 4 + 6;
             const delay = Math.random() * 3;
             star.style.setProperty('--twinkle-duration', `${duration}s`);
             star.style.animationDelay = `${delay}s`;
@@ -505,43 +422,29 @@ class Game {
     }
 
     setupEventListeners() {
-        // Touch events
+        const handleInteraction = (e) => {
+            const rect = this.canvas.getBoundingClientRect();
+            const scaleX = this.canvas.width / rect.width;
+            const scaleY = this.canvas.height / rect.height;
+            
+            const x = (e.clientX || e.touches[0].clientX - rect.left) * scaleX;
+            const y = (e.clientY || e.touches[0].clientY - rect.top) * scaleY;
+            
+            this.handleClick(x, y);
+        };
+
         this.canvas.addEventListener('touchstart', (e) => {
             e.preventDefault();
-            const touch = e.touches[0];
-            const rect = this.canvas.getBoundingClientRect();
-            const scaleX = this.canvas.width / rect.width;
-            const scaleY = this.canvas.height / rect.height;
-            
-            const x = (touch.clientX - rect.left) * scaleX;
-            const y = (touch.clientY - rect.top) * scaleY;
-            
-            this.handleClick(x, y);
+            handleInteraction(e);
         }, { passive: false });
 
-        // Mouse events
-        this.canvas.addEventListener('click', (e) => {
-            const rect = this.canvas.getBoundingClientRect();
-            const scaleX = this.canvas.width / rect.width;
-            const scaleY = this.canvas.height / rect.height;
-            
-            const x = (e.clientX - rect.left) * scaleX;
-            const y = (e.clientY - rect.top) * scaleY;
-            
-            this.handleClick(x, y);
-        });
+        this.canvas.addEventListener('click', handleInteraction);
 
-        // Prevent scrolling while playing
         document.addEventListener('touchmove', (e) => {
             if (this.isPlaying) e.preventDefault();
         }, { passive: false });
 
-        // Handle window resize
-        window.addEventListener('resize', () => {
-            this.resizeCanvas();
-        });
-
-        // Game control buttons
+        window.addEventListener('resize', () => this.resizeCanvas());
         this.startButton.addEventListener('click', () => this.startGame());
         this.pauseButton.addEventListener('click', () => this.togglePause());
     }
@@ -600,9 +503,9 @@ class Game {
         this.gameStartTime = Date.now();
         this.lastBubbleIncreaseTime = this.gameStartTime;
         
-        // Reset bubble counts to base values
-        this.modes.zen.maxBubbles = this.modes.zen.baseMaxBubbles;
-        this.modes.fast.maxBubbles = this.modes.fast.baseMaxBubbles;
+        Object.keys(this.modes).forEach(mode => {
+            this.modes[mode].maxBubbles = this.modes[mode].baseMaxBubbles;
+        });
         this.config.bubble.maxBubbles = this.modes.zen.maxBubbles;
         
         this.startButton.style.display = 'none';
@@ -629,14 +532,8 @@ class Game {
 
     getRandomColor() {
         const colors = [
-            '#FF6B6B', // Red
-            '#4ECDC4', // Cyan
-            '#45B7D1', // Blue
-            '#96CEB4', // Green
-            '#FFEEAD', // Yellow
-            '#FFD93D', // Orange
-            '#FF9999', // Pink
-            '#9B59B6'  // Purple
+            '#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4',
+            '#FFEEAD', '#FFD93D', '#FF9999', '#9B59B6'
         ];
         return colors[Math.floor(Math.random() * colors.length)];
     }
