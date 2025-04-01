@@ -151,39 +151,56 @@ body {
 @media (max-width: 768px) {
     html, body {
         background: linear-gradient(to bottom, #000000, #1a237e);
+        height: 100vh;
+        height: -webkit-fill-available;
     }
 
     body {
         background: linear-gradient(to bottom, #000000, #1a237e);
+        min-height: 100vh;
+        min-height: -webkit-fill-available;
     }
 
     .game-container {
         background: linear-gradient(to bottom, #000000, #1a237e);
+        height: 100vh;
+        height: -webkit-fill-available;
     }
 
     .game-title {
         font-size: 2em;
+        top: 40%;
     }
 
     .score-container {
         font-size: 1em;
         padding: 8px 16px;
+        top: env(safe-area-inset-top);
+        left: env(safe-area-inset-left);
     }
 
-    #startButton {
-        padding: 12px 24px;
-        font-size: 1.1em;
-    }
-
-    #pauseButton {
-        width: 36px;
-        height: 36px;
+    .mode-selector {
+        bottom: calc(env(safe-area-inset-bottom) + 20px);
+        gap: 8px;
     }
 
     .mode-selector button {
-        padding: 6px 12px;
-        min-width: 70px;
-        font-size: 0.9em;
+        padding: 10px 20px;
+        min-width: 80px;
+        font-size: 1em;
+        height: 44px;
+    }
+
+    #pauseButton {
+        bottom: calc(env(safe-area-inset-bottom) + 20px);
+        right: env(safe-area-inset-right);
+        width: 44px;
+        height: 44px;
+        display: none;
+    }
+
+    #pauseButton::before {
+        font-size: 1.4em;
     }
 }
 
@@ -191,39 +208,52 @@ body {
 @media (orientation: landscape) and (max-height: 500px) {
     html, body {
         background: linear-gradient(to bottom, #000000, #1a237e);
+        height: 100vh;
     }
 
     body {
         background: linear-gradient(to bottom, #000000, #1a237e);
+        min-height: 100vh;
     }
 
     .game-container {
         background: linear-gradient(to bottom, #000000, #1a237e);
+        height: 100vh;
     }
 
     .game-title {
         font-size: 1.5em;
+        top: 30%;
     }
 
     .score-container {
         font-size: 0.9em;
         padding: 6px 12px;
+        top: env(safe-area-inset-top);
+        left: env(safe-area-inset-left);
     }
 
-    #startButton {
-        padding: 10px 20px;
-        font-size: 1em;
-    }
-
-    #pauseButton {
-        width: 32px;
-        height: 32px;
+    .mode-selector {
+        bottom: calc(env(safe-area-inset-bottom) + 10px);
+        gap: 6px;
     }
 
     .mode-selector button {
-        padding: 4px 10px;
-        min-width: 60px;
-        font-size: 0.8em;
+        padding: 8px 16px;
+        min-width: 70px;
+        font-size: 0.9em;
+        height: 40px;
+    }
+
+    #pauseButton {
+        bottom: calc(env(safe-area-inset-bottom) + 10px);
+        right: env(safe-area-inset-right);
+        width: 40px;
+        height: 40px;
+    }
+
+    #pauseButton::before {
+        font-size: 1.2em;
     }
 }
 
