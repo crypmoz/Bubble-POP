@@ -33,6 +33,18 @@ class Bubble {
         this.y = canvas.height + this.radius;
         this.speed = Math.random() * 2 + 1;
         this.color = `hsl(${Math.random() * 360}, 70%, 50%)`;
+        this.baseColor = this.color;
+        this.glowIntensity = Math.random() * 0.3 + 0.7;
+        this.highlight = {
+            x: -this.radius * 0.3,
+            y: -this.radius * 0.3,
+            radius: this.radius * 0.4
+        };
+        this.shadow = {
+            x: this.radius * 0.2,
+            y: this.radius * 0.2,
+            radius: this.radius * 0.8
+        };
         
         // Different bubble types
         const random = Math.random();
@@ -64,29 +76,65 @@ class Bubble {
     }
 
     draw(ctx) {
+        // Create gradient for 3D effect
+        const gradient = ctx.createRadialGradient(
+            this.x + this.highlight.x,
+            this.y + this.highlight.y,
+            0,
+            this.x,
+            this.y,
+            this.radius * 1.2
+        );
+
+        // Parse the base color to RGB components
+        const baseRGB = this.hexToRgb(this.baseColor);
+        
+        // Create highlight and shadow colors
+        const highlightColor = `rgba(255, 255, 255, 0.8)`;
+        const mainColor = `rgba(${baseRGB.r}, ${baseRGB.g}, ${baseRGB.b}, ${this.glowIntensity})`;
+        const shadowColor = `rgba(${Math.max(0, baseRGB.r - 50)}, ${Math.max(0, baseRGB.g - 50)}, ${Math.max(0, baseRGB.b - 50)}, ${this.glowIntensity})`;
+
+        gradient.addColorStop(0, highlightColor);
+        gradient.addColorStop(0.4, mainColor);
+        gradient.addColorStop(1, shadowColor);
+
+        // Draw main bubble
         ctx.beginPath();
         ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
-        ctx.fillStyle = this.color;
+        ctx.fillStyle = gradient;
         ctx.fill();
-        ctx.strokeStyle = 'white';
-        ctx.lineWidth = 2;
-        ctx.stroke();
-        
-        ctx.fillStyle = 'white';
-        ctx.font = '20px Arial';
-        ctx.textAlign = 'center';
-        
-        switch(this.type) {
-            case 'special':
-                ctx.fillText('⭐', this.x, this.y + 7);
-                break;
-            case 'bomb':
-                ctx.fillText('💣', this.x, this.y + 7);
-                break;
-            case 'rainbow':
-                ctx.fillText('🌈', this.x, this.y + 7);
-                break;
-        }
+
+        // Add shine effect
+        const shineGradient = ctx.createRadialGradient(
+            this.x + this.highlight.x,
+            this.y + this.highlight.y,
+            0,
+            this.x + this.highlight.x,
+            this.y + this.highlight.y,
+            this.highlight.radius
+        );
+        shineGradient.addColorStop(0, 'rgba(255, 255, 255, 0.6)');
+        shineGradient.addColorStop(1, 'rgba(255, 255, 255, 0)');
+
+        ctx.beginPath();
+        ctx.arc(
+            this.x + this.highlight.x,
+            this.y + this.highlight.y,
+            this.highlight.radius,
+            0,
+            Math.PI * 2
+        );
+        ctx.fillStyle = shineGradient;
+        ctx.fill();
+    }
+
+    hexToRgb(hex) {
+        const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+        return result ? {
+            r: parseInt(result[1], 16),
+            g: parseInt(result[2], 16),
+            b: parseInt(result[3], 16)
+        } : null;
     }
 
     isClicked(x, y) {
@@ -107,8 +155,11 @@ class Game {
         this.particles = [];
         this.isPlaying = false;
         this.isPaused = false;
+        this.animationFrameId = null;
         this.startButton = document.getElementById('startButton');
-        this.pauseButton = document.getElementById('pauseButton');
+        this.pauseButton = document.createElement('button');
+        this.pauseButton.textContent = 'Pause';
+        this.pauseButton.classList.add('control-button');
         this.scoreElement = document.getElementById('score');
         this.highScoreElement = document.getElementById('highScore');
         this.combo = 0;
@@ -150,17 +201,21 @@ class Game {
             });
         }, { passive: false });
 
-        // Handle window resize
-        window.addEventListener('resize', () => {
-            this.resizeCanvas();
-            // Recalculate bubble positions if game is running
-            if (this.isPlaying) {
-                this.bubbles.forEach(bubble => {
-                    bubble.x = Math.min(bubble.x, this.canvas.width - bubble.radius);
-                    bubble.y = Math.min(bubble.y, this.canvas.height - bubble.radius);
+        // Add touchmove handler for smoother touch response
+        this.canvas.addEventListener('touchmove', (e) => {
+            if (this.isPlaying && !this.isPaused) {
+                e.preventDefault();
+                const touch = e.touches[0];
+                const rect = this.canvas.getBoundingClientRect();
+                const scaleX = this.canvas.width / rect.width;
+                const scaleY = this.canvas.height / rect.height;
+                
+                this.handleClick({
+                    clientX: (touch.clientX - rect.left) * scaleX,
+                    clientY: (touch.clientY - rect.top) * scaleY
                 });
             }
-        });
+        }, { passive: false });
 
         // Prevent default touch behaviors
         document.addEventListener('touchmove', (e) => {
@@ -169,17 +224,44 @@ class Game {
             }
         }, { passive: false });
 
+        // Handle window resize with debouncing
+        let resizeTimeout;
+        window.addEventListener('resize', () => {
+            clearTimeout(resizeTimeout);
+            resizeTimeout = setTimeout(() => {
+                this.resizeCanvas();
+                if (this.isPlaying) {
+                    this.bubbles.forEach(bubble => {
+                        bubble.x = Math.min(bubble.x, this.canvas.width - bubble.radius);
+                        bubble.y = Math.min(bubble.y, this.canvas.height - bubble.radius);
+                    });
+                }
+            }, 100);
+        });
+
         // Update high score display
         this.highScoreElement.textContent = this.highScore;
+
+        // Initialize pause button
+        this.controls = document.querySelector('.controls');
+        this.controls.appendChild(this.pauseButton);
+
+        this.createStarryBackground();
     }
 
     resizeCanvas() {
         const rect = this.canvas.getBoundingClientRect();
-        this.canvas.width = rect.width;
-        this.canvas.height = rect.height;
+        const dpr = window.devicePixelRatio || 1;
+        
+        // Set canvas size with device pixel ratio for better quality
+        this.canvas.width = rect.width * dpr;
+        this.canvas.height = rect.height * dpr;
+        
+        // Scale context to match device pixel ratio
+        this.ctx.scale(dpr, dpr);
         
         // Adjust bubble sizes based on screen size
-        const baseSize = Math.min(this.canvas.width, this.canvas.height) * 0.05;
+        const baseSize = Math.min(rect.width, rect.height) * 0.05;
         this.bubbles.forEach(bubble => {
             bubble.radius = Math.max(baseSize, Math.min(baseSize * 2, bubble.radius));
         });
@@ -194,7 +276,8 @@ class Game {
         this.isPlaying = true;
         this.isPaused = false;
         this.startButton.style.display = 'none';
-        this.pauseButton.style.display = 'block';
+        this.pauseButton.textContent = 'Pause';
+        this.pauseButton.style.display = 'inline-block';
         
         // Reset power-ups
         Object.keys(this.powerUps).forEach(powerUp => {
@@ -207,12 +290,20 @@ class Game {
             this.bubbles.push(new Bubble(this.canvas));
         }
         
-        this.gameLoop();
+        this.animate();
     }
 
     togglePause() {
+        if (!this.isPlaying) return;
+        
         this.isPaused = !this.isPaused;
         this.pauseButton.textContent = this.isPaused ? 'Resume' : 'Pause';
+        
+        if (this.isPaused) {
+            cancelAnimationFrame(this.animationFrameId);
+        } else {
+            this.animate();
+        }
     }
 
     activatePowerUp(powerUp) {
@@ -317,9 +408,10 @@ class Game {
         });
     }
 
-    gameLoop() {
+    animate() {
         if (!this.isPlaying || this.isPaused) return;
-
+        
+        this.animationFrameId = requestAnimationFrame(() => this.animate());
         this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
         
         // Update and draw particles
@@ -334,8 +426,30 @@ class Game {
             bubble.update();
             bubble.draw(this.ctx);
         });
+    }
 
-        requestAnimationFrame(() => this.gameLoop());
+    endGame() {
+        this.isPaused = false;
+        this.pauseButton.style.display = 'none';
+        cancelAnimationFrame(this.animationFrameId);
+    }
+
+    createStarryBackground() {
+        const starsContainer = document.createElement('div');
+        starsContainer.className = 'stars';
+        document.body.appendChild(starsContainer);
+
+        const numberOfStars = 100;
+        for (let i = 0; i < numberOfStars; i++) {
+            const star = document.createElement('div');
+            star.className = 'star';
+            star.style.left = `${Math.random() * 100}%`;
+            star.style.top = `${Math.random() * 100}%`;
+            star.style.width = `${Math.random() * 2 + 1}px`;
+            star.style.height = star.style.width;
+            star.style.setProperty('--twinkle-duration', `${Math.random() * 3 + 2}s`);
+            starsContainer.appendChild(star);
+        }
     }
 }
 

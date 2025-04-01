@@ -2,39 +2,104 @@
     margin: 0;
     padding: 0;
     box-sizing: border-box;
-    -webkit-tap-highlight-color: transparent; /* Remove tap highlight on mobile */
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
 }
 
 body {
-    font-family: Arial, sans-serif;
-    background: linear-gradient(135deg, #1a1a1a, #4a4a4a);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background: linear-gradient(135deg, #000000, #1a1a4a, #000033);
     min-height: 100vh;
+    min-height: -webkit-fill-available;
+    min-height: 100dvh;
     display: flex;
     justify-content: center;
     align-items: center;
-    touch-action: none;
-    overflow: hidden; /* Prevent scrolling on mobile */
+    overflow: hidden;
+    position: fixed;
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    padding: 0;
+}
+
+@keyframes twinkle {
+    0% { opacity: 0.3; }
+    50% { opacity: 1; }
+    100% { opacity: 0.3; }
+}
+
+.stars {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 0;
+}
+
+.star {
+    position: absolute;
+    background: white;
+    border-radius: 50%;
+    animation: twinkle var(--twinkle-duration, 3s) infinite;
 }
 
 .game-container {
     position: relative;
     width: 100%;
-    height: 100vh;
+    height: 100%;
     max-width: 500px;
     display: flex;
     flex-direction: column;
     align-items: center;
     overflow: hidden;
+    touch-action: none;
+    z-index: 1;
 }
 
 #gameCanvas {
     width: 100%;
     height: 100%;
-    background: rgba(0, 0, 0, 0.2);
+    background: transparent;
     touch-action: none;
     position: absolute;
     top: 0;
     left: 0;
+    transform: translateZ(0);
+    -webkit-transform: translateZ(0);
+}
+
+.controls {
+    position: absolute;
+    bottom: env(safe-area-inset-bottom, clamp(10px, 2vh, 20px));
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    gap: clamp(10px, 2vw, 15px);
+    z-index: 2;
+}
+
+button {
+    padding: clamp(10px, 2vh, 15px) clamp(20px, 4vw, 30px);
+    font-size: clamp(14px, 3vw, 18px);
+    background: rgba(76, 175, 80, 0.9);
+    color: white;
+    border: none;
+    border-radius: 25px;
+    cursor: pointer;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
+    backdrop-filter: blur(5px);
+    -webkit-backdrop-filter: blur(5px);
+    transition: transform 0.2s, background 0.2s;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+    font-weight: 600;
+}
+
+button:active {
+    transform: scale(0.95);
 }
 
 .score, .high-score {
@@ -42,65 +107,34 @@ body {
     color: white;
     font-size: clamp(16px, 4vw, 24px);
     font-weight: bold;
-    z-index: 1;
+    z-index: 2;
     text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
     padding: clamp(8px, 2vw, 10px) clamp(15px, 3vw, 20px);
     background: rgba(0, 0, 0, 0.3);
     border-radius: 20px;
-    white-space: nowrap;
+    backdrop-filter: blur(5px);
+    -webkit-backdrop-filter: blur(5px);
 }
 
 .score {
-    top: clamp(10px, 2vh, 20px);
+    top: env(safe-area-inset-top, clamp(10px, 2vh, 20px));
     left: clamp(10px, 2vw, 20px);
 }
 
 .high-score {
-    top: clamp(10px, 2vh, 20px);
+    top: env(safe-area-inset-top, clamp(10px, 2vh, 20px));
     right: clamp(10px, 2vw, 20px);
-}
-
-.controls {
-    position: absolute;
-    bottom: clamp(10px, 2vh, 20px);
-    left: 50%;
-    transform: translateX(-50%);
-    z-index: 1;
-    display: flex;
-    gap: clamp(5px, 1vw, 10px);
-}
-
-button {
-    padding: clamp(10px, 2vh, 15px) clamp(20px, 4vw, 30px);
-    font-size: clamp(14px, 3vw, 18px);
-    background: #4CAF50;
-    color: white;
-    border: none;
-    border-radius: 25px;
-    cursor: pointer;
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-    transition: transform 0.2s, background 0.2s;
-    touch-action: manipulation;
-    -webkit-tap-highlight-color: transparent;
-}
-
-button:hover {
-    transform: scale(1.05);
-    background: #45a049;
-}
-
-button:active {
-    transform: scale(0.95);
 }
 
 .power-ups {
     position: absolute;
-    top: clamp(10px, 2vh, 20px);
+    bottom: env(safe-area-inset-bottom, clamp(70px, 15vh, 100px));
     left: 50%;
     transform: translateX(-50%);
     display: flex;
     gap: clamp(10px, 2vw, 15px);
     z-index: 1;
+    touch-action: manipulation;
 }
 
 .power-up {
@@ -117,10 +151,13 @@ button:active {
     transition: transform 0.2s, background 0.2s;
     touch-action: manipulation;
     -webkit-tap-highlight-color: transparent;
+    transform: translateZ(0);
+    -webkit-transform: translateZ(0);
 }
 
 .power-up:hover {
-    transform: scale(1.1);
+    transform: scale(1.1) translateZ(0);
+    -webkit-transform: scale(1.1) translateZ(0);
     background: rgba(0, 0, 0, 0.5);
 }
 
@@ -130,9 +167,9 @@ button:active {
 }
 
 @keyframes pulse {
-    0% { transform: scale(1); }
-    50% { transform: scale(1.1); }
-    100% { transform: scale(1); }
+    0% { transform: scale(1) translateZ(0); -webkit-transform: scale(1) translateZ(0); }
+    50% { transform: scale(1.1) translateZ(0); -webkit-transform: scale(1.1) translateZ(0); }
+    100% { transform: scale(1) translateZ(0); -webkit-transform: scale(1) translateZ(0); }
 }
 
 .combo-text {
@@ -146,17 +183,34 @@ button:active {
     pointer-events: none;
     animation: fadeOut 1s forwards;
     z-index: 2;
+    transform: translateZ(0);
+    -webkit-transform: translateZ(0);
 }
 
 @keyframes fadeOut {
-    0% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
-    100% { opacity: 0; transform: translate(-50%, -50%) scale(1.5); }
+    0% { opacity: 1; transform: translate(-50%, -50%) scale(1) translateZ(0); -webkit-transform: translate(-50%, -50%) scale(1) translateZ(0); }
+    100% { opacity: 0; transform: translate(-50%, -50%) scale(1.5) translateZ(0); -webkit-transform: translate(-50%, -50%) scale(1.5) translateZ(0); }
+}
+
+/* Safari-specific fixes */
+@supports (-webkit-touch-callout: none) {
+    body {
+        height: -webkit-fill-available;
+    }
+    
+    button {
+        padding: clamp(12px, 2.5vh, 18px) clamp(25px, 5vw, 35px);
+    }
 }
 
 /* Mobile-specific adjustments */
 @media (max-width: 480px) {
     .game-container {
-        height: 100dvh; /* Use dynamic viewport height for mobile */
+        height: 100dvh;
+    }
+    
+    button {
+        font-size: clamp(16px, 3.5vw, 20px);
     }
 
     #gameCanvas {
@@ -164,12 +218,27 @@ button:active {
     }
 
     .power-ups {
-        top: auto;
-        bottom: clamp(70px, 15vh, 100px);
+        bottom: env(safe-area-inset-bottom, clamp(70px, 15vh, 100px));
     }
 
     .controls {
-        bottom: clamp(20px, 4vh, 30px);
+        bottom: env(safe-area-inset-bottom, clamp(20px, 4vh, 30px));
+    }
+}
+
+/* Landscape mode adjustments */
+@media (max-height: 480px) and (orientation: landscape) {
+    .power-ups {
+        bottom: env(safe-area-inset-bottom, clamp(50px, 10vh, 70px));
+    }
+
+    .controls {
+        bottom: env(safe-area-inset-bottom, clamp(10px, 2vh, 20px));
+    }
+
+    .score, .high-score {
+        font-size: clamp(14px, 3vw, 20px);
+        padding: clamp(6px, 1.5vw, 8px) clamp(12px, 2.5vw, 16px);
     }
 }
 
