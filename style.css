@@ -171,6 +171,10 @@ body {
         min-width: 70px;
         font-size: 0.9em;
     }
+
+    body {
+        background: linear-gradient(to bottom, #000000, #1a237e);
+    }
 }
 
 /* Landscape mode */
@@ -198,6 +202,10 @@ body {
         padding: 4px 10px;
         min-width: 60px;
         font-size: 0.8em;
+    }
+
+    body {
+        background: linear-gradient(to bottom, #000000, #1a237e);
     }
 }
 
