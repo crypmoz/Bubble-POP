@@ -11,26 +11,21 @@
     -ms-user-select: none;
 }
 
-html {
-    height: 100%;
+html, body {
     width: 100%;
+    height: 100%;
     overflow: hidden;
+    position: fixed;
 }
 
 body {
-    height: 100%;
-    width: 100%;
-    overflow: hidden;
-    position: fixed;
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
-    background: linear-gradient(135deg, #000033, #1a1a6a, #000044);
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background: linear-gradient(135deg, #000033, #1a1a6a);
     color: white;
-    -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
 }
 
 @keyframes twinkle {
@@ -77,8 +72,6 @@ body {
     display: flex;
     flex-direction: column;
     align-items: center;
-    z-index: 1;
-    touch-action: none;
 }
 
 #gameCanvas {
@@ -87,11 +80,6 @@ body {
     border-radius: 10px;
     background: rgba(0, 0, 0, 0.2);
     touch-action: none;
-    -webkit-touch-callout: none;
-    will-change: transform;
-    transform: translateZ(0);
-    backface-visibility: hidden;
-    perspective: 1000px;
 }
 
 .score-container {
@@ -104,12 +92,10 @@ body {
     display: flex;
     justify-content: space-between;
     padding: 10px 20px;
-    font-size: clamp(16px, 4vw, 24px);
+    font-size: 24px;
     background: rgba(0, 0, 0, 0.5);
     border-radius: 10px;
     z-index: 2;
-    backdrop-filter: blur(5px);
-    -webkit-backdrop-filter: blur(5px);
 }
 
 .game-overlay {
@@ -124,41 +110,33 @@ body {
     justify-content: center;
     align-items: center;
     z-index: 3;
-    backdrop-filter: blur(3px);
-    -webkit-backdrop-filter: blur(3px);
 }
 
 .game-title {
-    font-size: clamp(32px, 8vw, 48px);
+    font-size: 48px;
     margin-bottom: 30px;
     text-align: center;
-    text-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
 }
 
 .controls {
     display: flex;
     gap: 20px;
     margin: 20px 0;
-    z-index: 2;
     flex-wrap: wrap;
     justify-content: center;
 }
 
 button {
-    padding: clamp(10px, 3vw, 15px) clamp(20px, 5vw, 30px);
-    font-size: clamp(14px, 3vw, 18px);
+    padding: 15px 30px;
+    font-size: 18px;
     border: none;
     border-radius: 25px;
     background: rgba(255, 255, 255, 0.2);
     color: white;
     cursor: pointer;
-    backdrop-filter: blur(5px);
-    -webkit-backdrop-filter: blur(5px);
     transition: all 0.2s ease;
     text-transform: uppercase;
     font-weight: bold;
-    letter-spacing: 1px;
-    touch-action: manipulation;
 }
 
 button:hover {
@@ -176,32 +154,32 @@ button:active {
     left: 50%;
     transform: translateX(-50%);
     display: flex;
-    gap: clamp(10px, 2vw, 15px);
-    padding: clamp(8px, 2vw, 10px) clamp(15px, 3vw, 20px);
+    gap: 15px;
+    padding: 10px 20px;
     background: rgba(0, 0, 0, 0.5);
     border-radius: 25px;
     z-index: 2;
-    backdrop-filter: blur(5px);
-    -webkit-backdrop-filter: blur(5px);
 }
 
 .power-up {
-    width: clamp(40px, 8vw, 50px);
-    height: clamp(40px, 8vw, 50px);
+    width: 50px;
+    height: 50px;
     border-radius: 50%;
     background: rgba(255, 255, 255, 0.2);
     display: flex;
     align-items: center;
     justify-content: center;
     cursor: pointer;
-    font-size: clamp(18px, 4vw, 24px);
-    transition: transform 0.2s ease, background-color 0.2s ease;
-    will-change: transform;
-    touch-action: manipulation;
+    font-size: 24px;
+    transition: transform 0.2s ease;
 }
 
 .power-up:active {
     transform: scale(0.9);
+    background: rgba(255, 255, 255, 0.3);
+}
+
+.power-up.active {
     background: rgba(255, 255, 255, 0.3);
 }
 
@@ -237,11 +215,6 @@ button:active {
     visibility: visible;
     pointer-events: none;
     z-index: 10;
-}
-
-.power-up.active {
-    animation: pulse 1s infinite;
-    background: rgba(255, 255, 255, 0.3);
 }
 
 .power-up.cooldown {
@@ -331,7 +304,7 @@ button:active {
     }
 }
 
-/* Responsive adjustments */
+/* Mobile Responsive */
 @media (max-width: 768px) {
     .game-container {
         height: 75vh;
@@ -339,14 +312,29 @@ button:active {
     }
     
     .score-container {
+        font-size: 20px;
         padding: 8px 15px;
-        top: env(safe-area-inset-top, 5px);
     }
     
     .power-ups {
         padding: 8px 15px;
         gap: 10px;
-        bottom: env(safe-area-inset-bottom, 10px);
+    }
+    
+    .power-up {
+        width: 40px;
+        height: 40px;
+        font-size: 20px;
+    }
+    
+    .game-title {
+        font-size: 32px;
+        margin-bottom: 20px;
+    }
+    
+    button {
+        padding: 12px 24px;
+        font-size: 16px;
     }
 }
 
@@ -357,35 +345,23 @@ button:active {
     }
     
     .power-ups {
-        right: env(safe-area-inset-right, 20px);
+        right: 20px;
         left: auto;
         bottom: 50%;
         transform: translateY(50%);
         flex-direction: column;
     }
     
-    .score-container {
-        top: env(safe-area-inset-top, 5px);
-    }
-    
     .game-title {
-        font-size: clamp(24px, 6vw, 32px);
+        font-size: 24px;
         margin-bottom: 15px;
     }
 }
 
-/* iOS-specific fixes */
+/* iOS fixes */
 @supports (-webkit-touch-callout: none) {
-    html, body {
-        height: -webkit-fill-available;
-    }
-    
     .game-container {
         height: 70vh;
-    }
-    
-    .power-ups {
-        bottom: calc(env(safe-area-inset-bottom, 0px) + 10px);
     }
 }
 

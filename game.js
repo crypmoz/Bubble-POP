@@ -272,10 +272,6 @@ class Bubble {
 
 class Game {
     constructor() {
-        this.dpr = window.devicePixelRatio || 1;
-        this.isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-        this.isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
-        
         this.canvas = document.getElementById('gameCanvas');
         this.ctx = this.canvas.getContext('2d');
         this.score = 0;
@@ -284,9 +280,22 @@ class Game {
         this.isPaused = false;
         this.animationFrameId = null;
         this.bubbles = [];
-        this.lastBubbleTime = 0;
-        this.bubbleInterval = 1000;
         this.particles = [];
+        this.lastBubbleTime = 0;
+        
+        // Basic game settings
+        this.config = {
+            bubble: {
+                minSize: 20,
+                maxSize: 40,
+                spawnInterval: 1000,
+                minSpawnInterval: 500,
+                baseSpeed: 1.5
+            },
+            hitArea: {
+                multiplier: 1.2
+            }
+        };
         
         // Get DOM elements
         this.startButton = document.getElementById('startButton');
@@ -295,364 +304,163 @@ class Game {
         this.highScoreElement = document.getElementById('highScore');
         this.gameOverlay = document.getElementById('gameOverlay');
         
-        // Initialize event listeners
-        this.startButton.addEventListener('click', () => this.startGame());
-        this.pauseButton.addEventListener('click', () => this.togglePause());
-        
-        // Add frame rate control
-        this.lastFrameTime = 0;
-        this.frameInterval = 1000 / 60; // Target 60 FPS
-        
-        // Optimize particle system
-        this.maxParticles = 100;
-        
-        // Game balance settings
-        this.powerUpDurations = {
-            shield: 10000,
-            slowMotion: 8000,
-            doublePoints: 12000
-        };
-        
-        this.bubbleSpeed = {
-            min: 1,
-            max: 3,
-            increaseRate: 0.1 // Speed increase per 100 points
-        };
-        
-        // Initialize power-ups with new durations
+        // Initialize power-ups
         this.powerUps = {
-            shield: { element: document.getElementById('shield'), active: false, duration: this.powerUpDurations.shield },
-            slowMotion: { element: document.getElementById('slowMotion'), active: false, duration: this.powerUpDurations.slowMotion },
-            doublePoints: { element: document.getElementById('doublePoints'), active: false, duration: this.powerUpDurations.doublePoints }
+            shield: { element: document.getElementById('shield'), active: false },
+            slowMotion: { element: document.getElementById('slowMotion'), active: false },
+            doublePoints: { element: document.getElementById('doublePoints'), active: false }
         };
         
-        // Set up power-up click handlers
-        Object.entries(this.powerUps).forEach(([key, powerUp]) => {
-            const handlePowerUp = (e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                this.activatePowerUp(key);
-            };
-            
-            powerUp.element.addEventListener('click', handlePowerUp);
-            powerUp.element.addEventListener('touchstart', handlePowerUp, { passive: false });
-            
-            // Mobile tooltip handling
-            let tooltipTimeout;
-            powerUp.element.addEventListener('touchstart', (e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                clearTimeout(tooltipTimeout);
-                
-                Object.values(this.powerUps).forEach(p => 
-                    p.element.classList.remove('tooltip-visible')
-                );
-                
-                powerUp.element.classList.add('tooltip-visible');
-                
-                tooltipTimeout = setTimeout(() => {
-                    powerUp.element.classList.remove('tooltip-visible');
-                }, 2000);
-            }, { passive: false });
-        });
-
-        // Game configuration
-        this.config = {
-            bubble: {
-                baseSize: 0.03,
-                sizeVariation: 0.5,
-                spawnWidth: 0.9,
-                baseSpeed: 1.5,
-                maxSpeed: 4,
-                speedIncrease: 0.1,
-                spawnInterval: {
-                    initial: 1000,
-                    min: 400,
-                    decrease: 50
-                }
-            },
-            hitArea: {
-                multiplier: 1.2
-            },
-            combo: {
-                timeout: 2000,
-                multiplier: {
-                    base: 1,
-                    max: 3,
-                    increase: 0.5
-                }
-            }
-        };
-
-        // Initialize canvas with proper scaling
-        this.initializeCanvas();
-        
-        // Set up event listeners with proper touch handling
+        // Set up event listeners
         this.setupEventListeners();
         
-        // Initialize game state
-        this.resetGameState();
-    }
-
-    initializeCanvas() {
-        this.canvas = document.getElementById('gameCanvas');
-        this.ctx = this.canvas.getContext('2d');
+        // Initial setup
         this.resizeCanvas();
-        
-        // Enable image smoothing for better bubble rendering
-        this.ctx.imageSmoothingEnabled = true;
-        this.ctx.imageSmoothingQuality = 'high';
+        this.highScoreElement.textContent = this.highScore;
     }
 
     setupEventListeners() {
-        // Touch events with proper coordinate calculation
+        // Touch events
         this.canvas.addEventListener('touchstart', (e) => {
             e.preventDefault();
             const touch = e.touches[0];
             const rect = this.canvas.getBoundingClientRect();
-            const x = (touch.clientX - rect.left) * this.dpr;
-            const y = (touch.clientY - rect.top) * this.dpr;
-            this.handleInteraction(x, y);
+            const scaleX = this.canvas.width / rect.width;
+            const scaleY = this.canvas.height / rect.height;
+            
+            const x = (touch.clientX - rect.left) * scaleX;
+            const y = (touch.clientY - rect.top) * scaleY;
+            
+            this.handleClick(x, y);
         }, { passive: false });
 
-        // Mouse events with consistent coordinate handling
+        // Mouse events
         this.canvas.addEventListener('click', (e) => {
             const rect = this.canvas.getBoundingClientRect();
-            const x = (e.clientX - rect.left) * this.dpr;
-            const y = (e.clientY - rect.top) * this.dpr;
-            this.handleInteraction(x, y);
+            const scaleX = this.canvas.width / rect.width;
+            const scaleY = this.canvas.height / rect.height;
+            
+            const x = (e.clientX - rect.left) * scaleX;
+            const y = (e.clientY - rect.top) * scaleY;
+            
+            this.handleClick(x, y);
         });
 
-        // Prevent unwanted mobile behaviors
+        // Prevent scrolling while playing
         document.addEventListener('touchmove', (e) => {
             if (this.isPlaying) e.preventDefault();
         }, { passive: false });
 
-        document.addEventListener('touchend', (e) => {
-            if (this.isPlaying) e.preventDefault();
-        }, { passive: false });
-
-        // Handle resize with debouncing
-        let resizeTimeout;
+        // Handle window resize
         window.addEventListener('resize', () => {
-            clearTimeout(resizeTimeout);
-            resizeTimeout = setTimeout(() => {
-                this.resizeCanvas();
-                this.adjustGameElements();
-            }, 250);
+            this.resizeCanvas();
         });
 
-        // Handle visibility change
-        document.addEventListener('visibilitychange', () => {
-            if (document.hidden && this.isPlaying && !this.isPaused) {
-                this.togglePause();
-            }
+        // Set up power-up click handlers
+        Object.entries(this.powerUps).forEach(([key, powerUp]) => {
+            powerUp.element.addEventListener('click', (e) => {
+                e.preventDefault();
+                this.activatePowerUp(key);
+            });
         });
+
+        // Game control buttons
+        this.startButton.addEventListener('click', () => this.startGame());
+        this.pauseButton.addEventListener('click', () => this.togglePause());
     }
 
-    handleInteraction(x, y) {
+    handleClick(x, y) {
         if (!this.isPlaying || this.isPaused) return;
 
         let hitBubble = false;
-        const currentTime = Date.now();
-
-        // Update combo
-        if (currentTime - this.lastBubblePopTime > this.config.combo.timeout) {
-            this.combo = this.config.combo.multiplier.base;
-        }
-
-        // Create touch feedback
-        this.createTouchFeedback(x, y);
-
-        // Process bubble hits
+        
         this.bubbles = this.bubbles.filter(bubble => {
-            if (!bubble || !this.isValidBubble(bubble)) return false;
-
-            const distance = this.getDistance(x, y, bubble.x, bubble.y);
-            const hitRadius = bubble.radius * this.config.hitArea.multiplier;
-
-            if (distance <= hitRadius) {
+            const dx = x - bubble.x;
+            const dy = y - bubble.y;
+            const distance = Math.sqrt(dx * dx + dy * dy);
+            
+            if (distance <= bubble.radius * this.config.hitArea.multiplier) {
                 hitBubble = true;
-                this.processBubbleHit(bubble, x, y);
+                this.score += bubble.points;
+                this.scoreElement.textContent = this.score;
+                
+                if (this.score > this.highScore) {
+                    this.highScore = this.score;
+                    this.highScoreElement.textContent = this.highScore;
+                    localStorage.setItem('highScore', this.highScore);
+                }
+                
+                this.createPopEffect(bubble);
                 return false;
             }
             return true;
         });
 
-        // Provide haptic feedback
         if (hitBubble && navigator.vibrate) {
             navigator.vibrate(50);
         }
     }
 
-    isValidBubble(bubble) {
-        return bubble && 
-               typeof bubble.x === 'number' && 
-               typeof bubble.y === 'number' &&
-               !isNaN(bubble.x) && 
-               !isNaN(bubble.y);
-    }
-
-    getDistance(x1, y1, x2, y2) {
-        return Math.sqrt(Math.pow(x2 - x1, 2) + Math.pow(y2 - y1, 2));
-    }
-
-    processBubbleHit(bubble, x, y) {
-        const basePoints = this.powerUps.doublePoints.active ? bubble.points * 2 : bubble.points;
-        const finalPoints = Math.round(basePoints * this.combo);
-        
-        this.score += finalPoints;
-        this.scoreElement.textContent = this.score;
-        
-        this.showPointsPopup(x, y, finalPoints);
-        this.createPopEffect(bubble);
-        
-        if (this.score > this.highScore) {
-            this.highScore = this.score;
-            this.highScoreElement.textContent = this.highScore;
-            localStorage.setItem('highScore', this.highScore);
-        }
-
-        // Update combo
-        this.combo = Math.min(
-            this.combo + this.config.combo.multiplier.increase,
-            this.config.combo.multiplier.max
-        );
-        this.lastBubblePopTime = Date.now();
-    }
-
     createBubble() {
-        const screenSize = Math.min(this.canvas.width, this.canvas.height);
-        const baseSize = screenSize * this.config.bubble.baseSize;
-        const sizeVariation = baseSize * this.config.bubble.sizeVariation;
-        const radius = baseSize + Math.random() * sizeVariation;
-
-        const usableWidth = this.canvas.width * this.config.bubble.spawnWidth;
-        const margin = (this.canvas.width - usableWidth) / 2;
+        const minSize = this.config.bubble.minSize;
+        const maxSize = this.config.bubble.maxSize;
+        const radius = Math.random() * (maxSize - minSize) + minSize;
         
-        const x = margin + Math.random() * usableWidth;
+        const x = Math.random() * (this.canvas.width - radius * 2) + radius;
         const y = this.canvas.height + radius;
-
+        
         const bubble = new Bubble(x, y, radius, this.getRandomColor());
-        bubble.speed = this.getBubbleSpeed();
+        bubble.speed = this.config.bubble.baseSpeed;
         bubble.canvas = this.canvas;
         
         return bubble;
     }
 
-    getBubbleSpeed() {
-        const speedIncrease = Math.floor(this.score / 100) * this.config.bubble.speedIncrease;
-        return Math.min(
-            this.config.bubble.maxSpeed,
-            this.config.bubble.baseSpeed + speedIncrease
-        );
-    }
-
-    getRandomColor() {
-        const colors = [
-            'hsl(0, 80%, 60%)',    // Red
-            'hsl(30, 80%, 60%)',   // Orange
-            'hsl(60, 80%, 60%)',   // Yellow
-            'hsl(120, 80%, 60%)',  // Green
-            'hsl(180, 80%, 60%)',  // Cyan
-            'hsl(240, 80%, 60%)',  // Blue
-            'hsl(300, 80%, 60%)',  // Purple
-            'hsl(330, 80%, 60%)'   // Pink
-        ];
-        return colors[Math.floor(Math.random() * colors.length)];
-    }
-
     animate(currentTime) {
         if (!this.isPlaying || this.isPaused) return;
 
-        // Frame rate control
-        if (currentTime - this.lastFrameTime < this.frameInterval) {
-            this.animationFrameId = requestAnimationFrame(time => this.animate(time));
-            return;
-        }
-        this.lastFrameTime = currentTime;
-
-        // Clear canvas
         this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
 
-        // Update and draw game elements
-        this.updateParticles();
-        this.updateBubbles();
-        this.spawnBubbles(currentTime);
-
-        // Request next frame
-        this.animationFrameId = requestAnimationFrame(time => this.animate(time));
-    }
-
-    updateParticles() {
+        // Update and draw particles
         this.particles = this.particles.filter(particle => {
             particle.update();
             particle.draw(this.ctx);
-            if (particle.life <= 0) {
-                this.recycleParticle(particle);
-                return false;
-            }
-            return true;
+            return particle.life > 0;
         });
-    }
 
-    updateBubbles() {
+        // Update and draw bubbles
         this.bubbles = this.bubbles.filter(bubble => {
             if (bubble.y + bubble.radius < 0) return false;
             bubble.update();
             bubble.draw(this.ctx);
             return true;
         });
-    }
 
-    spawnBubbles(currentTime) {
-        const spawnInterval = Math.max(
-            this.config.bubble.spawnInterval.min,
-            this.config.bubble.spawnInterval.initial - 
-            (Math.floor(this.score / 100) * this.config.bubble.spawnInterval.decrease)
-        );
-
-        if (currentTime - this.lastBubbleTime > spawnInterval) {
+        // Spawn new bubbles
+        if (currentTime - this.lastBubbleTime > this.config.bubble.spawnInterval) {
             this.bubbles.push(this.createBubble());
             this.lastBubbleTime = currentTime;
+            
+            // Increase difficulty
+            this.config.bubble.spawnInterval = Math.max(
+                this.config.bubble.minSpawnInterval,
+                this.config.bubble.spawnInterval - 10
+            );
+        }
+
+        this.animationFrameId = requestAnimationFrame((time) => this.animate(time));
+    }
+
+    createPopEffect(bubble) {
+        for (let i = 0; i < 8; i++) {
+            this.particles.push(new Particle(bubble.x, bubble.y, bubble.color));
         }
     }
 
     resizeCanvas() {
         const rect = this.canvas.getBoundingClientRect();
-        
-        this.canvas.width = rect.width * this.dpr;
-        this.canvas.height = rect.height * this.dpr;
-        
-        this.ctx.scale(this.dpr, this.dpr);
-        
-        // Adjust existing bubbles
-        this.adjustGameElements();
-    }
-
-    adjustGameElements() {
-        if (!this.isPlaying) return;
-
-        const usableWidth = this.canvas.width * this.config.bubble.spawnWidth;
-        const margin = (this.canvas.width - usableWidth) / 2;
-
-        this.bubbles.forEach(bubble => {
-            if (bubble.x < margin) {
-                bubble.x = margin + bubble.radius;
-            } else if (bubble.x > this.canvas.width - margin) {
-                bubble.x = this.canvas.width - margin - bubble.radius;
-            }
-        });
-    }
-
-    resetGameState() {
-        this.score = 0;
-        this.combo = this.config.combo.multiplier.base;
-        this.lastBubblePopTime = 0;
-        this.bubbles = [];
-        this.particles = [];
-        this.lastFrameTime = 0;
-        this.lastBubbleTime = 0;
+        this.canvas.width = rect.width;
+        this.canvas.height = rect.height;
     }
 
     startGame() {
@@ -662,86 +470,15 @@ class Game {
         this.bubbles = [];
         this.particles = [];
         this.isPaused = false;
-        this.lastFrameTime = 0;
+        this.config.bubble.spawnInterval = 1000;
         
         this.startButton.style.display = 'none';
         this.pauseButton.style.display = 'inline-block';
         this.gameOverlay.style.display = 'none';
         
-        // Reset any active power-ups
-        Object.values(this.powerUps).forEach(powerUp => {
-            powerUp.active = false;
-            powerUp.element.classList.remove('active');
-        });
-        
         this.animate(0);
     }
-    
-    getParticle() {
-        if (this.particlePool.length > 0) {
-            return this.particlePool.pop();
-        }
-        return null;
-    }
-    
-    recycleParticle(particle) {
-        if (this.particlePool.length < this.maxParticlePoolSize) {
-            this.particlePool.push(particle);
-        }
-    }
-    
-    getPopup() {
-        if (this.popupPool.length > 0) {
-            return this.popupPool.pop();
-        }
-        return document.createElement('div');
-    }
-    
-    recyclePopup(popup) {
-        if (this.popupPool.length < this.maxPopupPoolSize) {
-            popup.remove();
-            this.popupPool.push(popup);
-        }
-    }
-    
-    createTouchFeedback(x, y) {
-        const feedback = document.createElement('div');
-        feedback.className = 'touch-feedback';
-        feedback.style.left = `${x}px`;
-        feedback.style.top = `${y}px`;
-        document.body.appendChild(feedback);
-        
-        setTimeout(() => {
-            feedback.remove();
-        }, 500);
-    }
-    
-    createPopEffect(bubble) {
-        const particleCount = Math.min(8, this.maxParticles - this.particles.length);
-        for (let i = 0; i < particleCount; i++) {
-            let particle = this.getParticle();
-            if (!particle) {
-                particle = new Particle(bubble.x, bubble.y, bubble.color);
-            } else {
-                particle.reset(bubble.x, bubble.y, bubble.color);
-            }
-            this.particles.push(particle);
-        }
-    }
-    
-    showPointsPopup(x, y, points) {
-        const popup = this.getPopup();
-        popup.className = 'points-popup';
-        popup.textContent = points > 0 ? `+${points}` : points;
-        popup.style.left = `${x}px`;
-        popup.style.top = `${y}px`;
-        document.body.appendChild(popup);
-        
-        setTimeout(() => {
-            this.recyclePopup(popup);
-        }, 1000);
-    }
-    
+
     togglePause() {
         if (!this.isPlaying) return;
         
@@ -756,15 +493,6 @@ class Game {
             this.animate(0);
         }
     }
-    
-    endGame() {
-        this.isPlaying = false;
-        this.isPaused = false;
-        this.startButton.style.display = 'inline-block';
-        this.pauseButton.style.display = 'none';
-        this.gameOverlay.style.display = 'flex';
-        cancelAnimationFrame(this.animationFrameId);
-    }
 
     activatePowerUp(powerUp) {
         if (this.powerUps[powerUp].active) return;
@@ -772,34 +500,24 @@ class Game {
         this.powerUps[powerUp].active = true;
         this.powerUps[powerUp].element.classList.add('active');
         
-        // Apply power-up effects
-        switch(powerUp) {
-            case 'shield':
-                // Shield effect (visual only for now)
-                break;
-            case 'slowMotion':
-                this.bubbles.forEach(bubble => bubble.speed *= 0.5);
-                break;
-            case 'doublePoints':
-                // Points multiplier is handled in handleClick
-                break;
-        }
-        
-        // Reset power-up after duration
         setTimeout(() => {
             this.powerUps[powerUp].active = false;
             this.powerUps[powerUp].element.classList.remove('active');
-            
-            if (powerUp === 'slowMotion') {
-                this.bubbles.forEach(bubble => bubble.speed *= 2);
-            }
-            
-            // Add cooldown
-            this.powerUps[powerUp].element.classList.add('cooldown');
-            setTimeout(() => {
-                this.powerUps[powerUp].element.classList.remove('cooldown');
-            }, this.gameSettings.powerUpCooldowns[powerUp]);
-        }, this.powerUpDurations[powerUp]);
+        }, 10000);
+    }
+
+    getRandomColor() {
+        const colors = [
+            '#FF6B6B', // Red
+            '#4ECDC4', // Cyan
+            '#45B7D1', // Blue
+            '#96CEB4', // Green
+            '#FFEEAD', // Yellow
+            '#FFD93D', // Orange
+            '#FF9999', // Pink
+            '#9B59B6'  // Purple
+        ];
+        return colors[Math.floor(Math.random() * colors.length)];
     }
 }
 
