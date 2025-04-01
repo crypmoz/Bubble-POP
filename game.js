@@ -80,49 +80,62 @@ class Bubble {
 class Game {
     constructor() {
         this.canvas = document.getElementById('gameCanvas');
-        if (!this.canvas) {
-            console.error('Canvas element not found');
-            return;
-        }
-        
-        this.ctx = this.canvas.getContext('2d', { alpha: true });
+        this.ctx = this.canvas.getContext('2d');
+        this.bubbles = [];
         this.score = 0;
         this.highScore = parseInt(localStorage.getItem('highScore')) || 0;
-        this.isPlaying = false;
         this.isPaused = false;
-        this.animationFrameId = null;
-        this.bubbles = [];
-        this.particles = [];
-        this.lastBubbleTime = 0;
-        this.gameStartTime = 0;
-        this.lastBubbleIncreaseTime = 0;
-        this.BUBBLE_INCREASE_INTERVAL = 10000; // 10 seconds
+        this.isPlaying = false;
         this.lastFrameTime = 0;
-        this.isZenMode = true;
-        this.bubbleColors = ['#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEEAD', '#D4A5A5'];
+        this.bubbleColors = ['#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEEAD', '#FFD93D'];
         
+        this.BUBBLE_INCREASE_INTERVAL = 10000; // 10 seconds
+        this.lastBubbleIncrease = 0;
         this.bubbleCount = 5;
         
-        // Initialize game modes
-        this.initializeGameModes();
-        
-        // Set up DOM elements and controls
-        this.setupDOMElements();
-        this.setupControls();
-        this.setupEventListeners();
-        
-        // Initialize game environment
-        this.createStarryBackground();
         this.resizeCanvas();
-        
-        // Set initial mode button state
+        this.setupEventListeners();
+        this.initializeStars();
+        this.initializeButtons();
+    }
+
+    initializeButtons() {
         const zenButton = document.getElementById('zenMode');
-        if (zenButton) {
-            zenButton.classList.add('active');
+        const fastButton = document.getElementById('fastMode');
+        const pauseButton = document.getElementById('pauseButton');
+
+        zenButton.classList.add('active');
+        pauseButton.style.display = 'none';
+
+        zenButton.addEventListener('click', () => this.setGameMode('zen'));
+        fastButton.addEventListener('click', () => this.setGameMode('fast'));
+        pauseButton.addEventListener('click', () => this.togglePause());
+    }
+
+    setGameMode(mode) {
+        this.isZenMode = mode === 'zen';
+        document.querySelectorAll('.mode-selector button').forEach(button => {
+            button.classList.remove('active');
+            if ((button.id === 'zenMode' && mode === 'zen') ||
+                (button.id === 'fastMode' && mode === 'fast')) {
+                button.classList.add('active');
+            }
+        });
+
+        if (!this.isPlaying) {
+            this.startGame();
         }
-        
-        // Start animation loop
-        requestAnimationFrame(() => this.animate(0));
+    }
+
+    startGame() {
+        this.isPlaying = true;
+        this.isPaused = false;
+        this.score = 0;
+        this.bubbles = [];
+        this.updateScore();
+        this.bubbleCount = 5;
+        document.getElementById('pauseButton').style.display = 'flex';
+        requestAnimationFrame(this.animate.bind(this));
     }
 
     setupDOMElements() {
@@ -238,33 +251,6 @@ class Game {
             },
             hitArea: { multiplier: 1.2 }
         };
-    }
-
-    setGameMode(mode) {
-        if (!this.modes[mode]) return;
-        
-        this.currentMode = mode;
-        const settings = this.modes[mode];
-        
-        this.config.bubble.baseSpeed = settings.baseSpeed;
-        this.config.bubble.maxSpeed = settings.maxSpeed;
-        this.config.bubble.maxBubbles = settings.maxBubbles;
-        
-        // Update button states
-        const buttons = document.querySelectorAll('.mode-selector button');
-        buttons.forEach(button => {
-            const isActive = button.id === `${mode}Mode`;
-            button.classList.toggle('active', isActive);
-            button.style.background = isActive ? 'rgba(255, 255, 255, 0.3)' : 'rgba(0, 0, 0, 0.7)';
-        });
-
-        // Update bubble speeds
-        this.bubbles.forEach(bubble => bubble.speed = Math.cos(Math.random() * Math.PI * 2) * settings.baseSpeed);
-        
-        // Start game if not playing
-        if (!this.isPlaying) {
-            this.startGame();
-        }
     }
 
     setupEventListeners() {
@@ -475,33 +461,6 @@ class Game {
             this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
             this.bubbles.forEach(bubble => bubble.draw(this.ctx));
         }
-    }
-
-    startGame() {
-        this.isPlaying = true;
-        this.isPaused = false;
-        this.score = 0;
-        this.scoreElement.textContent = '0';
-        this.bubbles = [];
-        this.particles = [];
-        this.lastFrameTime = 0;
-        this.gameStartTime = Date.now();
-        this.lastBubbleIncreaseTime = this.gameStartTime;
-        
-        // Reset bubble counts
-        Object.keys(this.modes).forEach(mode => {
-            this.modes[mode].maxBubbles = this.modes[mode].baseMaxBubbles;
-        });
-        this.config.bubble.maxBubbles = this.modes[this.currentMode].maxBubbles;
-        
-        // Show pause button
-        if (this.pauseButton) {
-            this.pauseButton.style.display = 'flex';
-            this.pauseButton.classList.remove('paused');
-        }
-        
-        // Start animation
-        this.animate(performance.now());
     }
 
     togglePause() {
