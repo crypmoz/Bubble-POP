@@ -31,211 +31,59 @@ class Particle {
 }
 
 class Bubble {
-    constructor(x, y, radius, color) {
+    constructor(x, y, radius, color, speedX, speedY) {
         this.x = x;
         this.y = y;
         this.radius = radius;
         this.color = color;
-        this.speed = Math.random() * 2 + 1;
-        this.baseColor = this.color;
-        this.glowIntensity = Math.random() * 0.3 + 0.7;
-        this.highlight = {
-            x: -this.radius * 0.3,
-            y: -this.radius * 0.3,
-            radius: this.radius * 0.4
-        };
-        this.shadow = {
-            x: this.radius * 0.2,
-            y: this.radius * 0.2,
-            radius: this.radius * 0.8
-        };
-        
-        // Set bubble type and points
-        const random = Math.random();
-        if (random < 0.05) {
-            this.type = 'star';
-            this.points = 10;
-            this.specialColor = '#FFD700';
-        } else if (random < 0.1) {
-            this.type = 'bomb';
-            this.points = -5;
-            this.specialColor = '#FF0000';
-        } else if (random < 0.15) {
-            this.type = 'rainbow';
-            this.points = 5;
-            this.specialColor = null;
-        } else {
-            this.type = 'normal';
-            this.points = 1;
-            this.specialColor = null;
-        }
+        this.speedX = speedX;
+        this.speedY = speedY;
+        this.isPopped = false;
+        this.popProgress = 0;
     }
 
-    update() {
-        this.y -= this.speed;
-        if (this.type === 'rainbow') {
-            this.color = `hsl(${Math.random() * 360}, 70%, 50%)`;
+    update(deltaTime) {
+        if (this.isPopped) {
+            this.popProgress += deltaTime * 0.005;
+            return this.popProgress >= 1;
         }
-        if (this.y + this.radius < 0) {
-            this.y = this.canvas.height + this.radius;
-            this.x = Math.random() * (this.canvas.width - this.radius * 2) + this.radius;
+
+        this.x += this.speedX * deltaTime;
+        this.y += this.speedY * deltaTime;
+
+        if (this.x - this.radius < 0 || this.x + this.radius > window.innerWidth) {
+            this.speedX = -this.speedX;
+            this.x = Math.max(this.radius, Math.min(window.innerWidth - this.radius, this.x));
         }
+        if (this.y - this.radius < 0 || this.y + this.radius > window.innerHeight) {
+            this.speedY = -this.speedY;
+            this.y = Math.max(this.radius, Math.min(window.innerHeight - this.radius, this.y));
+        }
+
+        return false;
     }
 
     draw(ctx) {
-        const gradient = ctx.createRadialGradient(
-            this.x + this.highlight.x,
-            this.y + this.highlight.y,
-            0,
-            this.x,
-            this.y,
-            this.radius * 1.2
-        );
-
-        const rgb = this.color.startsWith('#') ? this.hexToRgb(this.color) : 
-                    this.color.startsWith('hsl') ? this.hslToRgb(this.color) : 
-                    { r: 100, g: 100, b: 255 };
-        
-        gradient.addColorStop(0, 'rgba(255, 255, 255, 0.8)');
-        gradient.addColorStop(0.4, `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${this.glowIntensity})`);
-        gradient.addColorStop(1, `rgba(${Math.max(0, rgb.r - 50)}, ${Math.max(0, rgb.g - 50)}, ${Math.max(0, rgb.b - 50)}, ${this.glowIntensity})`);
-
-        // Draw special effects
-        if (this.type === 'star') this.drawStarEffect(ctx);
-        else if (this.type === 'bomb') this.drawBombEffect(ctx);
-        else if (this.type === 'rainbow') this.drawRainbowEffect(ctx);
-
-        // Draw main bubble
         ctx.beginPath();
-        ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
-        ctx.fillStyle = gradient;
-        ctx.fill();
-
-        // Add shine effect
-        const shineGradient = ctx.createRadialGradient(
-            this.x + this.highlight.x,
-            this.y + this.highlight.y,
-            0,
-            this.x + this.highlight.x,
-            this.y + this.highlight.y,
-            this.highlight.radius
-        );
-        shineGradient.addColorStop(0, 'rgba(255, 255, 255, 0.6)');
-        shineGradient.addColorStop(1, 'rgba(255, 255, 255, 0)');
-
-        ctx.beginPath();
-        ctx.arc(this.x + this.highlight.x, this.y + this.highlight.y, this.highlight.radius, 0, Math.PI * 2);
-        ctx.fillStyle = shineGradient;
-        ctx.fill();
-    }
-
-    drawStarEffect(ctx) {
-        const spikes = 5;
-        const outerRadius = this.radius * 1.2;
-        const innerRadius = this.radius * 0.8;
-        
-        ctx.beginPath();
-        for (let i = 0; i < spikes * 2; i++) {
-            const radius = i % 2 === 0 ? outerRadius : innerRadius;
-            const angle = (i * Math.PI) / spikes;
-            const x = this.x + Math.cos(angle) * radius;
-            const y = this.y + Math.sin(angle) * radius;
-            
-            if (i === 0) ctx.moveTo(x, y);
-            else ctx.lineTo(x, y);
+        if (this.isPopped) {
+            ctx.globalAlpha = 1 - this.popProgress;
+            ctx.arc(this.x, this.y, this.radius * (1 + this.popProgress), 0, Math.PI * 2);
+        } else {
+            ctx.globalAlpha = 1;
+            ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
         }
-        ctx.closePath();
-        ctx.fillStyle = this.specialColor;
-        ctx.globalAlpha = 0.3;
+        ctx.fillStyle = this.color;
         ctx.fill();
         ctx.globalAlpha = 1;
     }
 
-    drawBombEffect(ctx) {
-        ctx.beginPath();
-        ctx.moveTo(this.x + this.radius, this.y - this.radius * 0.5);
-        ctx.lineTo(this.x + this.radius * 1.5, this.y - this.radius);
-        ctx.strokeStyle = '#8B4513';
-        ctx.lineWidth = 2;
-        ctx.stroke();
-        
-        if (Math.random() < 0.3) {
-            ctx.beginPath();
-            ctx.arc(this.x + this.radius * 1.5, this.y - this.radius, 2, 0, Math.PI * 2);
-            ctx.fillStyle = '#FFA500';
-            ctx.fill();
-        }
+    contains(x, y) {
+        const distance = Math.sqrt((this.x - x) ** 2 + (this.y - y) ** 2);
+        return distance <= this.radius;
     }
 
-    drawRainbowEffect(ctx) {
-        const gradient = ctx.createLinearGradient(
-            this.x - this.radius,
-            this.y - this.radius,
-            this.x + this.radius,
-            this.y + this.radius
-        );
-        
-        gradient.addColorStop(0, '#FF0000');
-        gradient.addColorStop(0.2, '#FFA500');
-        gradient.addColorStop(0.4, '#FFFF00');
-        gradient.addColorStop(0.6, '#00FF00');
-        gradient.addColorStop(0.8, '#0000FF');
-        gradient.addColorStop(1, '#800080');
-        
-        ctx.beginPath();
-        ctx.arc(this.x, this.y, this.radius * 1.1, 0, Math.PI * 2);
-        ctx.strokeStyle = gradient;
-        ctx.lineWidth = 3;
-        ctx.stroke();
-    }
-
-    hexToRgb(hex) {
-        const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
-        return result ? {
-            r: parseInt(result[1], 16),
-            g: parseInt(result[2], 16),
-            b: parseInt(result[3], 16)
-        } : null;
-    }
-
-    hslToRgb(hsl) {
-        const match = hsl.match(/hsl\((\d+),\s*(\d+)%,\s*(\d+)%\)/);
-        if (!match) return { r: 100, g: 100, b: 255 };
-
-        let h = parseInt(match[1]) / 360;
-        let s = parseInt(match[2]) / 100;
-        let l = parseInt(match[3]) / 100;
-
-        let r, g, b;
-
-        if (s === 0) {
-            r = g = b = l;
-        } else {
-            const hue2rgb = (p, q, t) => {
-                if (t < 0) t += 1;
-                if (t > 1) t -= 1;
-                if (t < 1/6) return p + (q - p) * 6 * t;
-                if (t < 1/2) return q;
-                if (t < 2/3) return p + (q - p) * (2/3 - t) * 6;
-                return p;
-            };
-
-            const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
-            const p = 2 * l - q;
-            r = hue2rgb(p, q, h + 1/3);
-            g = hue2rgb(p, q, h);
-            b = hue2rgb(p, q, h - 1/3);
-        }
-
-        return {
-            r: Math.round(r * 255),
-            g: Math.round(g * 255),
-            b: Math.round(b * 255)
-        };
-    }
-
-    isClicked(x, y) {
-        return Math.sqrt(Math.pow(x - this.x, 2) + Math.pow(y - this.y, 2)) <= this.radius;
+    pop() {
+        this.isPopped = true;
     }
 }
 
@@ -260,6 +108,10 @@ class Game {
         this.lastBubbleIncreaseTime = 0;
         this.BUBBLE_INCREASE_INTERVAL = 10000; // 10 seconds
         this.lastFrameTime = 0;
+        this.isZenMode = true;
+        this.bubbleColors = ['#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEEAD', '#D4A5A5'];
+        
+        this.bubbleCount = 5;
         
         // Initialize game modes
         this.initializeGameModes();
@@ -272,6 +124,12 @@ class Game {
         // Initialize game environment
         this.createStarryBackground();
         this.resizeCanvas();
+        
+        // Set initial mode button state
+        const zenButton = document.getElementById('zenMode');
+        if (zenButton) {
+            zenButton.classList.add('active');
+        }
         
         // Start animation loop
         requestAnimationFrame(() => this.animate(0));
@@ -403,14 +261,21 @@ class Game {
         this.config.bubble.maxBubbles = settings.maxBubbles;
         
         // Update button states
-        const buttons = this.modeSelector.querySelectorAll('button');
+        const buttons = document.querySelectorAll('.mode-selector button');
         buttons.forEach(button => {
-            button.style.background = button.textContent.toLowerCase().includes(mode) ? 
-                'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.6)';
+            const isActive = button.id === `${mode}Mode`;
+            button.classList.toggle('active', isActive);
+            button.style.background = isActive ? 'rgba(255, 255, 255, 0.3)' : 'rgba(0, 0, 0, 0.7)';
         });
 
         // Update bubble speeds
-        this.bubbles.forEach(bubble => bubble.speed = settings.baseSpeed);
+        this.bubbles.forEach(bubble => bubble.speedX = Math.cos(Math.random() * Math.PI * 2) * settings.baseSpeed);
+        this.bubbles.forEach(bubble => bubble.speedY = Math.sin(Math.random() * Math.PI * 2) * settings.baseSpeed);
+        
+        // Start game if not playing
+        if (!this.isPlaying) {
+            this.startGame();
+        }
     }
 
     setupEventListeners() {
@@ -447,8 +312,10 @@ class Game {
             });
         });
         
-        this.startButton.addEventListener('click', () => this.startGame());
-        this.pauseButton.addEventListener('click', () => this.togglePause());
+        // Remove startButton reference since we're using mode buttons to start
+        if (this.pauseButton) {
+            this.pauseButton.addEventListener('click', () => this.togglePause());
+        }
         
         // Prevent scrolling on mobile
         document.addEventListener('touchmove', (e) => {
@@ -461,16 +328,14 @@ class Game {
         const x = Math.random() * (this.canvas.width - radius * 2) + radius;
         const y = this.canvas.height + radius;
         
-        const bubble = new Bubble(x, y, radius, this.getRandomColor());
-        bubble.speed = this.config.bubble.baseSpeed;
-        bubble.canvas = this.canvas;
+        const speed = this.isZenMode ? 0.1 : 0.2;
+        const angle = Math.random() * Math.PI * 2;
+        const speedX = Math.cos(angle) * speed;
+        const speedY = Math.sin(angle) * speed;
         
-        if (Math.random() < this.config.bubble.negativeBubbleChance) {
-            bubble.points = -5;
-            bubble.color = '#FF0000';
-        }
+        const color = this.bubbleColors[Math.floor(Math.random() * this.bubbleColors.length)];
         
-        return bubble;
+        return new Bubble(x, y, radius, color, speedX, speedY);
     }
 
     animate(currentTime) {
@@ -503,7 +368,7 @@ class Game {
         // Update bubbles with delta time
         this.bubbles = this.bubbles.filter(bubble => {
             if (bubble.y + bubble.radius < 0) return false;
-            bubble.update();
+            bubble.update(deltaTime);
             bubble.draw(this.ctx);
             return true;
         });
