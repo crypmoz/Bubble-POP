@@ -214,14 +214,14 @@ class Game {
         this.startButton.addEventListener('click', () => this.startGame());
         this.pauseButton.addEventListener('click', () => this.togglePause());
         
-        // Initialize power-ups with mobile-friendly durations
+        // Initialize power-ups
         this.powerUps = {
             shield: { element: document.getElementById('shield'), active: false, duration: 8000 },
             slowMotion: { element: document.getElementById('slowMotion'), active: false, duration: 8000 },
             doublePoints: { element: document.getElementById('doublePoints'), active: false, duration: 8000 }
         };
         
-        // Set up power-up click handlers with improved mobile handling
+        // Set up power-up click handlers
         Object.entries(this.powerUps).forEach(([key, powerUp]) => {
             const handlePowerUp = (e) => {
                 e.preventDefault();
@@ -239,33 +239,41 @@ class Game {
                 e.stopPropagation();
                 clearTimeout(tooltipTimeout);
                 
-                // Remove tooltip-visible class from all power-ups
                 Object.values(this.powerUps).forEach(p => 
                     p.element.classList.remove('tooltip-visible')
                 );
                 
-                // Add tooltip-visible class to touched power-up
                 powerUp.element.classList.add('tooltip-visible');
                 
-                // Hide tooltip after 2 seconds
                 tooltipTimeout = setTimeout(() => {
                     powerUp.element.classList.remove('tooltip-visible');
                 }, 2000);
             }, { passive: false });
         });
-        
-        // Improved touch handling for the canvas
+
+        // Handle touch events
         this.canvas.addEventListener('touchstart', (e) => {
             e.preventDefault();
             const touch = e.touches[0];
             const rect = this.canvas.getBoundingClientRect();
+            const dpr = window.devicePixelRatio || 1;
             
-            // Calculate proper touch coordinates
-            const x = ((touch.clientX - rect.left) / rect.width) * this.canvas.width;
-            const y = ((touch.clientY - rect.top) / rect.height) * this.canvas.height;
+            const x = ((touch.clientX - rect.left) * dpr);
+            const y = ((touch.clientY - rect.top) * dpr);
             
-            this.handleClick({ clientX: x, clientY: y, isTouchEvent: true });
+            this.handleClick(x, y);
         }, { passive: false });
+
+        // Handle mouse events
+        this.canvas.addEventListener('click', (e) => {
+            const rect = this.canvas.getBoundingClientRect();
+            const dpr = window.devicePixelRatio || 1;
+            
+            const x = (e.clientX - rect.left) * dpr;
+            const y = (e.clientY - rect.top) * dpr;
+            
+            this.handleClick(x, y);
+        });
 
         // Prevent scrolling while playing
         document.body.addEventListener('touchmove', (e) => {
@@ -273,14 +281,6 @@ class Game {
                 e.preventDefault();
             }
         }, { passive: false });
-
-        // Handle clicks
-        this.canvas.addEventListener('click', (e) => {
-            const rect = this.canvas.getBoundingClientRect();
-            const x = ((e.clientX - rect.left) / rect.width) * this.canvas.width;
-            const y = ((e.clientY - rect.top) / rect.height) * this.canvas.height;
-            this.handleClick({ clientX: x, clientY: y, isTouchEvent: false });
-        });
         
         // Handle window resize
         window.addEventListener('resize', () => {
@@ -293,14 +293,10 @@ class Game {
             }, 100);
         });
         
-        // Create starry background
-        this.createStarryBackground();
-        
         // Initial setup
+        this.createStarryBackground();
         this.resizeCanvas();
         this.highScoreElement.textContent = this.highScore;
-        
-        // Show initial overlay
         this.gameOverlay.style.display = 'flex';
     }
     
@@ -325,21 +321,18 @@ class Game {
     }
     
     createBubble() {
-        // Adjust bubble size based on screen size
         const screenSize = Math.min(this.canvas.width, this.canvas.height);
-        const minSize = screenSize * (this.isMobile ? 0.04 : 0.03); // Slightly larger on mobile
-        const maxSize = minSize * 1.5;
+        const minSize = screenSize * (this.isMobile ? 0.05 : 0.04);
+        const maxSize = minSize * 1.3;
         const radius = Math.random() * (maxSize - minSize) + minSize;
         
-        // Calculate available width for spawning bubbles
-        const usableWidth = this.canvas.width * 0.8; // Use 80% of canvas width
-        const margin = (this.canvas.width - usableWidth) / 2; // Center margin
+        // Use 60% of canvas width for bubble spawning
+        const usableWidth = this.canvas.width * 0.6;
+        const margin = (this.canvas.width - usableWidth) / 2;
         
-        // Spawn bubble within the usable width
         const x = margin + Math.random() * usableWidth;
         const y = this.canvas.height + radius;
         
-        // Create vibrant colors array
         const colors = [
             'hsl(0, 80%, 60%)',    // Red
             'hsl(30, 80%, 60%)',   // Orange
@@ -381,13 +374,8 @@ class Game {
         this.animationFrameId = requestAnimationFrame(() => this.animate());
     }
     
-    handleClick(event) {
+    handleClick(x, y) {
         if (!this.isPlaying || this.isPaused) return;
-        
-        // Get the canvas-relative coordinates
-        const rect = this.canvas.getBoundingClientRect();
-        const x = event.isTouchEvent ? event.clientX : ((event.clientX - rect.left) / rect.width) * this.canvas.width;
-        const y = event.isTouchEvent ? event.clientY : ((event.clientY - rect.top) / rect.height) * this.canvas.height;
         
         let hitBubble = false;
         
@@ -399,11 +387,10 @@ class Game {
             const distance = Math.sqrt(dx * dx + dy * dy);
             
             // Increase hit area for mobile
-            const hitRadius = this.isMobile ? bubble.radius * 1.5 : bubble.radius;
+            const hitRadius = this.isMobile ? bubble.radius * 2 : bubble.radius * 1.2;
             
             if (distance <= hitRadius) {
                 hitBubble = true;
-                // Add points based on power-ups
                 const points = this.powerUps.doublePoints.active ? 2 : 1;
                 this.score += points;
                 this.scoreElement.textContent = this.score;
@@ -414,14 +401,12 @@ class Game {
                     localStorage.setItem('highScore', this.highScore);
                 }
                 
-                // Create pop effect
                 this.createPopEffect(bubble);
                 return false;
             }
             return true;
         });
         
-        // Provide haptic feedback on mobile if available
         if (hitBubble && navigator.vibrate) {
             navigator.vibrate(50);
         }
@@ -467,28 +452,17 @@ class Game {
         
         // Scale context for retina displays
         this.ctx.scale(dpr, dpr);
-        
-        // Adjust existing bubbles after resize
-        this.adjustBubblePositions();
     }
     
     adjustBubblePositions() {
-        const usableWidth = this.canvas.width * 0.8;
+        const usableWidth = this.canvas.width * 0.6;
         const margin = (this.canvas.width - usableWidth) / 2;
         
         this.bubbles.forEach(bubble => {
-            // Keep bubbles within the usable width
             if (bubble.x < margin) {
                 bubble.x = margin + bubble.radius;
             } else if (bubble.x > this.canvas.width - margin) {
                 bubble.x = this.canvas.width - margin - bubble.radius;
-            }
-            
-            // Ensure bubbles stay within vertical bounds
-            if (bubble.y < bubble.radius) {
-                bubble.y = bubble.radius;
-            } else if (bubble.y > this.canvas.height - bubble.radius) {
-                bubble.y = this.canvas.height - bubble.radius;
             }
         });
     }

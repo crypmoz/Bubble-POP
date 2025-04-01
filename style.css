@@ -4,25 +4,24 @@
     padding: 0;
     box-sizing: border-box;
     -webkit-tap-highlight-color: transparent;
-    touch-action: manipulation;
+    touch-action: none;
     user-select: none;
     -webkit-user-select: none;
     -moz-user-select: none;
     -ms-user-select: none;
 }
 
-html, body {
+html {
     height: 100%;
     width: 100%;
     overflow: hidden;
-    position: fixed;
 }
 
 body {
+    height: 100%;
+    width: 100%;
     margin: 0;
     padding: 0;
-    min-height: 100vh;
-    min-height: -webkit-fill-available;
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -30,7 +29,10 @@ body {
     font-family: Arial, sans-serif;
     background: linear-gradient(135deg, #000033, #1a1a6a, #000044);
     color: white;
-    position: relative;
+    overflow: hidden;
+    position: fixed;
+    top: 0;
+    left: 0;
 }
 
 @keyframes twinkle {
@@ -78,7 +80,6 @@ body {
     flex-direction: column;
     align-items: center;
     z-index: 1;
-    touch-action: none;
 }
 
 #gameCanvas {
@@ -146,9 +147,9 @@ button {
     letter-spacing: 1px;
 }
 
-button:hover {
+button:hover, button:active {
     background: rgba(255, 255, 255, 0.3);
-    transform: scale(1.05);
+    transform: scale(0.95);
 }
 
 .power-ups {
@@ -161,7 +162,6 @@ button:hover {
     border-radius: 25px;
     z-index: 2;
     backdrop-filter: blur(5px);
-    touch-action: manipulation;
 }
 
 .power-up {
@@ -176,11 +176,10 @@ button:hover {
     font-size: 24px;
     transition: all 0.3s;
     position: relative;
-    touch-action: manipulation;
 }
 
 .power-up:active {
-    transform: scale(0.95);
+    transform: scale(0.9);
     background: rgba(255, 255, 255, 0.3);
 }
 
@@ -245,18 +244,8 @@ button:hover {
 
 @media (max-width: 768px) {
     .game-container {
-        height: 70vh;
+        height: 75vh;
         margin: 5px;
-    }
-    
-    .game-title {
-        font-size: 36px;
-        margin-bottom: 20px;
-    }
-    
-    button {
-        padding: 12px 24px;
-        font-size: 16px;
     }
     
     .score-container {
@@ -270,41 +259,26 @@ button:hover {
         font-size: 20px;
     }
     
-    .power-up.tooltip-visible::after,
-    .power-up.tooltip-visible::before {
-        opacity: 1;
-        visibility: visible;
-    }
-    
-    .power-up::after {
-        width: max-content;
-        max-width: 200px;
-        text-align: center;
-        font-size: 12px;
-        padding: 6px 10px;
-    }
-    
     .power-ups {
-        bottom: 10px;
+        bottom: 15px;
         padding: 8px 12px;
         gap: 12px;
+    }
+    
+    .game-title {
+        font-size: 36px;
+        margin-bottom: 20px;
+    }
+    
+    button {
+        padding: 12px 24px;
+        font-size: 16px;
     }
 }
 
 @media (max-width: 480px) {
     .game-container {
-        height: 65vh;
-        margin: 5px;
-    }
-    
-    .game-title {
-        font-size: 28px;
-        margin-bottom: 15px;
-    }
-    
-    button {
-        padding: 10px 20px;
-        font-size: 14px;
+        height: 70vh;
     }
     
     .score-container {
@@ -323,36 +297,34 @@ button:hover {
         padding: 6px 10px;
         gap: 10px;
     }
+    
+    .game-title {
+        font-size: 28px;
+        margin-bottom: 15px;
+    }
+    
+    button {
+        padding: 10px 20px;
+        font-size: 14px;
+    }
 }
 
 /* Landscape mode adjustments */
 @media (max-height: 480px) and (orientation: landscape) {
     .game-container {
         height: 90vh;
-        margin: 5px;
     }
     
     .power-ups {
-        left: 10px;
+        right: 10px;
         bottom: 50%;
         transform: translateY(50%);
-        flex-direction: column;
-        padding: 10px 6px;
-    }
-    
-    .score-container {
-        font-size: 14px;
-        padding: 4px 8px;
     }
 }
 
 /* iOS-specific fixes */
 @supports (-webkit-touch-callout: none) {
-    body {
+    html, body {
         height: -webkit-fill-available;
-    }
-    
-    .game-container {
-        height: 70vh;
     }
 } 
