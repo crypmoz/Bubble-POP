@@ -4,19 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Bubble Pop Game</title>
-    <link rel="icon" type="image/svg+xml" href="favicon.svg">
     <link rel="stylesheet" href="style.css">
-    <!-- Google tag (gtag.js) -->
-    <script async src="https://www.googletagmanager.com/gtag/js?id=G-XXXXXXXXXX"></script>
-    <script>
-        window.dataLayer = window.dataLayer || [];
-        function gtag(){dataLayer.push(arguments);}
-        gtag('js', new Date());
-        gtag('config', 'G-XXXXXXXXXX', {
-            send_page_view: true,
-            cookie_flags: 'SameSite=None;Secure'
-        });
-    </script>
 </head>
 <body>
     <div class="stars"></div>
@@ -39,14 +27,6 @@
             <div class="power-up" id="doublePoints" title="Double Points">2x</div>
         </div>
     </div>
-    <script>
-        // Error handling for script loading
-        window.addEventListener('error', function(e) {
-            if (e.target.tagName === 'SCRIPT') {
-                console.error('Script loading error:', e.target.src);
-            }
-        });
-    </script>
     <script src="game.js"></script>
 </body>
 </html> 
