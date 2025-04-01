@@ -220,9 +220,36 @@ class Game {
             doublePoints: { element: document.getElementById('doublePoints'), active: false, duration: 5000 }
         };
         
-        // Set up power-up click handlers
+        // Set up power-up click handlers and mobile tooltip handling
         Object.entries(this.powerUps).forEach(([key, powerUp]) => {
             powerUp.element.addEventListener('click', () => this.activatePowerUp(key));
+            
+            // Mobile tooltip handling
+            let tooltipTimeout;
+            powerUp.element.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                clearTimeout(tooltipTimeout);
+                
+                // Remove tooltip-visible class from all power-ups
+                Object.values(this.powerUps).forEach(p => 
+                    p.element.classList.remove('tooltip-visible')
+                );
+                
+                // Add tooltip-visible class to touched power-up
+                powerUp.element.classList.add('tooltip-visible');
+                
+                // Hide tooltip after 2 seconds
+                tooltipTimeout = setTimeout(() => {
+                    powerUp.element.classList.remove('tooltip-visible');
+                }, 2000);
+            });
+        });
+        
+        // Hide tooltips when touching canvas
+        this.canvas.addEventListener('touchstart', () => {
+            Object.values(this.powerUps).forEach(powerUp => 
+                powerUp.element.classList.remove('tooltip-visible')
+            );
         });
         
         // Improved touch handling
