@@ -67,24 +67,42 @@ body {
     z-index: 1;
 }
 
-#startButton {
+.mode-selector {
     position: fixed;
     bottom: max(20px, env(safe-area-inset-bottom));
     left: 50%;
     transform: translateX(-50%);
+    display: flex;
+    gap: 10px;
+    z-index: 2;
+}
+
+.mode-selector button {
     background: rgba(0, 0, 0, 0.7);
     color: white;
     border: none;
-    padding: 15px 30px;
-    border-radius: 25px;
-    font-size: 1.2em;
+    padding: 12px 24px;
+    border-radius: 15px;
+    font-size: 1.1em;
+    min-width: 90px;
     cursor: pointer;
-    z-index: 2;
     transition: all 0.3s ease;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
 }
 
-#startButton:hover {
+.mode-selector button:hover {
     background: rgba(255, 255, 255, 0.2);
+}
+
+.mode-selector button:active {
+    transform: scale(0.95);
+}
+
+.mode-selector button.active {
+    background: rgba(255, 255, 255, 0.3);
 }
 
 #pauseButton {
@@ -94,8 +112,8 @@ body {
     background: rgba(0, 0, 0, 0.7);
     color: white;
     border: none;
-    width: 40px;
-    height: 40px;
+    width: 44px;
+    height: 44px;
     border-radius: 50%;
     cursor: pointer;
     z-index: 2;
@@ -116,7 +134,7 @@ body {
 
 #pauseButton::before {
     content: "⏸️";
-    font-size: 1.2em;
+    font-size: 1.4em;
     line-height: 1;
 }
 
@@ -150,19 +168,16 @@ body {
 /* Mobile Styles */
 @media (max-width: 768px) {
     html, body {
-        background: linear-gradient(to bottom, #000000, #1a237e);
         height: 100vh;
         height: -webkit-fill-available;
     }
 
     body {
-        background: linear-gradient(to bottom, #000000, #1a237e);
         min-height: 100vh;
         min-height: -webkit-fill-available;
     }
 
     .game-container {
-        background: linear-gradient(to bottom, #000000, #1a237e);
         height: 100vh;
         height: -webkit-fill-available;
     }
@@ -196,31 +211,11 @@ body {
         right: env(safe-area-inset-right);
         width: 44px;
         height: 44px;
-        display: none;
-    }
-
-    #pauseButton::before {
-        font-size: 1.4em;
     }
 }
 
 /* Landscape mode */
 @media (orientation: landscape) and (max-height: 500px) {
-    html, body {
-        background: linear-gradient(to bottom, #000000, #1a237e);
-        height: 100vh;
-    }
-
-    body {
-        background: linear-gradient(to bottom, #000000, #1a237e);
-        min-height: 100vh;
-    }
-
-    .game-container {
-        background: linear-gradient(to bottom, #000000, #1a237e);
-        height: 100vh;
-    }
-
     .game-title {
         font-size: 1.5em;
         top: 30%;
