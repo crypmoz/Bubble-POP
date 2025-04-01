@@ -217,11 +217,7 @@ class Game {
             doublePoints: document.getElementById('doublePoints')
         };
         
-        Object.entries(this.powerUps).forEach(([key, element]) => {
-            element.addEventListener('click', () => this.activatePowerUp(key));
-        });
-        
-        // Set up touch events
+        // Improved touch handling
         this.canvas.addEventListener('touchstart', (e) => {
             e.preventDefault();
             const touch = e.touches[0];
@@ -229,11 +225,23 @@ class Game {
             const scaleX = this.canvas.width / rect.width;
             const scaleY = this.canvas.height / rect.height;
             
-            this.handleClick({
-                clientX: (touch.clientX - rect.left) * scaleX,
-                clientY: (touch.clientY - rect.top) * scaleY
-            });
+            const x = (touch.clientX - rect.left) * scaleX;
+            const y = (touch.clientY - rect.top) * scaleY;
+            
+            this.handleClick({ clientX: touch.clientX, clientY: touch.clientY });
         }, { passive: false });
+
+        // Prevent scrolling while playing
+        this.canvas.addEventListener('touchmove', (e) => {
+            if (this.isPlaying) {
+                e.preventDefault();
+            }
+        }, { passive: false });
+
+        // Handle clicks/touches
+        this.canvas.addEventListener('click', (e) => {
+            this.handleClick(e);
+        });
         
         // Handle window resize
         window.addEventListener('resize', () => {
@@ -276,11 +284,21 @@ class Game {
         const x = Math.random() * (this.canvas.width - radius * 2) + radius;
         const y = this.canvas.height + radius;
         
-        const hue = Math.random() * 360;
-        const color = `hsl(${hue}, 70%, 50%)`;
+        // Create vibrant colors array
+        const colors = [
+            'hsl(0, 80%, 60%)',    // Red
+            'hsl(30, 80%, 60%)',   // Orange
+            'hsl(60, 80%, 60%)',   // Yellow
+            'hsl(120, 80%, 60%)',  // Green
+            'hsl(180, 80%, 60%)',  // Cyan
+            'hsl(240, 80%, 60%)',  // Blue
+            'hsl(300, 80%, 60%)',  // Purple
+            'hsl(330, 80%, 60%)'   // Pink
+        ];
         
+        const color = colors[Math.floor(Math.random() * colors.length)];
         const bubble = new Bubble(x, y, radius, color);
-        bubble.canvas = this.canvas; // Pass canvas reference to bubble
+        bubble.canvas = this.canvas;
         return bubble;
     }
     
