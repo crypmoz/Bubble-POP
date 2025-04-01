@@ -43,6 +43,7 @@ body {
     height: 100%;
     z-index: 0;
     pointer-events: none;
+    overflow: hidden;
 }
 
 .star {
@@ -58,6 +59,7 @@ body {
     width: 100%;
     max-width: 800px;
     height: 100vh;
+    max-height: 100vh;
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -66,10 +68,15 @@ body {
 }
 
 #gameCanvas {
+    width: 100%;
+    height: 100%;
     background: transparent;
     border-radius: 10px;
-    box-shadow: 0 0 20px rgba(0, 0, 0, 0.3);
+    touch-action: none;
     z-index: 1;
+    position: absolute;
+    top: 0;
+    left: 0;
 }
 
 .score-container {
@@ -126,6 +133,7 @@ body {
     font-size: 1.2em;
     z-index: 2;
     transition: all 0.3s ease;
+    display: block;
 }
 
 #startButton:hover, #pauseButton:hover {

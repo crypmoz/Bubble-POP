@@ -289,11 +289,59 @@ class Game {
             hitArea: { multiplier: 1.2 }
         };
         
-        this.startButton = document.getElementById('startButton');
-        this.pauseButton = document.getElementById('pauseButton');
+        // Create game container if it doesn't exist
+        let gameContainer = document.querySelector('.game-container');
+        if (!gameContainer) {
+            gameContainer = document.createElement('div');
+            gameContainer.className = 'game-container';
+            document.body.appendChild(gameContainer);
+            gameContainer.appendChild(this.canvas);
+        }
+        
+        // Create score container if it doesn't exist
+        let scoreContainer = document.querySelector('.score-container');
+        if (!scoreContainer) {
+            scoreContainer = document.createElement('div');
+            scoreContainer.className = 'score-container';
+            scoreContainer.innerHTML = `
+                <div>Score: <span id="score">0</span></div>
+                <div>High Score: <span id="highScore">0</span></div>
+            `;
+            document.body.appendChild(scoreContainer);
+        }
+        
+        // Create start button if it doesn't exist
+        let startButton = document.getElementById('startButton');
+        if (!startButton) {
+            startButton = document.createElement('button');
+            startButton.id = 'startButton';
+            startButton.textContent = 'Start Game';
+            document.body.appendChild(startButton);
+        }
+        
+        // Create pause button if it doesn't exist
+        let pauseButton = document.getElementById('pauseButton');
+        if (!pauseButton) {
+            pauseButton = document.createElement('button');
+            pauseButton.id = 'pauseButton';
+            pauseButton.textContent = 'Pause';
+            pauseButton.style.display = 'none';
+            document.body.appendChild(pauseButton);
+        }
+        
+        this.startButton = startButton;
+        this.pauseButton = pauseButton;
         this.scoreElement = document.getElementById('score');
         this.highScoreElement = document.getElementById('highScore');
-        this.gameOverlay = document.getElementById('gameOverlay');
+        
+        // Create game overlay if it doesn't exist
+        let gameOverlay = document.getElementById('gameOverlay');
+        if (!gameOverlay) {
+            gameOverlay = document.createElement('div');
+            gameOverlay.id = 'gameOverlay';
+            document.body.appendChild(gameOverlay);
+        }
+        this.gameOverlay = gameOverlay;
         
         this.createModeSelector();
         this.setupEventListeners();
@@ -301,6 +349,12 @@ class Game {
         this.resizeCanvas();
         this.highScoreElement.textContent = this.highScore;
         this.currentMode = 'zen';
+        
+        // Initial canvas size
+        this.resizeCanvas();
+        
+        // Start animation loop
+        requestAnimationFrame(() => this.animate(0));
     }
 
     createModeSelector() {
@@ -490,7 +544,10 @@ class Game {
     }
 
     resizeCanvas() {
-        const rect = this.canvas.getBoundingClientRect();
+        const container = document.querySelector('.game-container');
+        const rect = container.getBoundingClientRect();
+        
+        // Set canvas size to match container
         this.canvas.width = rect.width;
         this.canvas.height = rect.height;
         
@@ -499,6 +556,12 @@ class Game {
         if (stars) {
             stars.style.zIndex = '0';
             this.canvas.style.zIndex = '1';
+        }
+        
+        // Clear and redraw
+        if (this.ctx) {
+            this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+            this.bubbles.forEach(bubble => bubble.draw(this.ctx));
         }
     }
 
