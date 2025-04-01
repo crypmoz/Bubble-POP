@@ -455,14 +455,25 @@ class Game {
         container.className = 'stars';
         document.body.insertBefore(container, document.body.firstChild);
         
-        for (let i = 0; i < 300; i++) {
+        // Create game title if it doesn't exist
+        let gameTitle = document.querySelector('.game-title');
+        if (!gameTitle) {
+            gameTitle = document.createElement('h1');
+            gameTitle.className = 'game-title';
+            gameTitle.textContent = 'Bubble Pop';
+            document.querySelector('.game-container').appendChild(gameTitle);
+        }
+        
+        // Reduced number of stars to 150 (50% of original 300)
+        for (let i = 0; i < 150; i++) {
             const star = document.createElement('div');
             star.className = 'star';
             
             star.style.left = `${Math.random() * 100}%`;
             star.style.top = `${Math.random() * 100}%`;
             
-            const size = Math.random() * 4 + 2;
+            // Smaller star sizes for more dot-like appearance
+            const size = Math.random() * 2 + 1; // 1-3px instead of 2-6px
             star.style.width = `${size}px`;
             star.style.height = `${size}px`;
             
@@ -571,7 +582,7 @@ class Game {
         this.isPaused = !this.isPaused;
         
         if (this.pauseButton) {
-            this.pauseButton.textContent = this.isPaused ? 'Resume' : 'Pause';
+            this.pauseButton.classList.toggle('paused', this.isPaused);
             this.pauseButton.style.backgroundColor = this.isPaused ? 'rgba(0, 255, 0, 0.7)' : 'rgba(0, 0, 0, 0.7)';
         }
         
@@ -580,7 +591,6 @@ class Game {
         }
         
         if (!this.isPaused) {
-            // Reset last frame time when resuming to prevent large delta time
             this.lastFrameTime = 0;
             this.animate(performance.now());
         }
