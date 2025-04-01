@@ -1,3 +1,4 @@
+/* Force update - v1 */
 * {
     margin: 0;
     padding: 0;
@@ -8,7 +9,7 @@
 
 body {
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-    background: linear-gradient(135deg, #000033, #1a1a6a, #000044);
+    background: linear-gradient(135deg, #000044, #1a1a7a, #000055);
     min-height: 100vh;
     min-height: -webkit-fill-available;
     min-height: 100dvh;
