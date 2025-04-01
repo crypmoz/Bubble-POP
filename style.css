@@ -33,7 +33,7 @@ body {
 
 @keyframes twinkle {
     0% {
-        opacity: 0;
+        opacity: 0.2;
         transform: scale(0.5);
     }
     50% {
@@ -41,7 +41,7 @@ body {
         transform: scale(1.2);
     }
     100% {
-        opacity: 0;
+        opacity: 0.2;
         transform: scale(0.5);
     }
 }
@@ -104,7 +104,7 @@ body {
 }
 
 .game-overlay {
-    position: absolute;
+    position: fixed;
     top: 0;
     left: 0;
     width: 100%;
@@ -114,13 +114,15 @@ body {
     flex-direction: column;
     justify-content: center;
     align-items: center;
-    z-index: 3;
+    z-index: 1000;
 }
 
 .game-title {
     font-size: 48px;
     margin-bottom: 30px;
     text-align: center;
+    color: white;
+    text-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
 }
 
 .controls {
@@ -189,63 +191,39 @@ button:active {
 }
 
 /* Game controls */
-#startButton {
+#startButton, #pauseButton {
     position: fixed;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
     background: rgba(255, 255, 255, 0.2);
     color: white;
-    border: 2px solid rgba(255, 255, 255, 0.5);
+    border: 2px solid rgba(255, 255, 255, 0.3);
     padding: 15px 30px;
     border-radius: 25px;
     cursor: pointer;
     font-family: 'Arial', sans-serif;
     font-size: 1.2em;
     transition: all 0.3s ease;
-    z-index: 100;
+    z-index: 1001;
     backdrop-filter: blur(5px);
-    box-shadow: 0 0 20px rgba(255, 255, 255, 0.2);
 }
 
-#startButton:hover {
-    background: rgba(255, 255, 255, 0.3);
-    transform: translate(-50%, -50%) scale(1.05);
-    box-shadow: 0 0 30px rgba(255, 255, 255, 0.3);
-}
-
-#startButton:active {
-    transform: translate(-50%, -50%) scale(0.95);
+#startButton {
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, 50%);
 }
 
 #pauseButton {
-    position: fixed;
     top: 20px;
     right: 20px;
-    background: rgba(255, 255, 255, 0.1);
-    color: white;
-    border: none;
-    padding: 10px 20px;
-    border-radius: 20px;
-    cursor: pointer;
-    font-family: 'Arial', sans-serif;
-    transition: all 0.3s ease;
-    z-index: 100;
 }
 
-/* Stars background */
-.star {
-    position: absolute;
-    background: white;
-    border-radius: 50%;
-    animation: twinkle 1s infinite;
-    pointer-events: none;
+#startButton:hover, #pauseButton:hover {
+    background: rgba(255, 255, 255, 0.3);
+    transform: translate(-50%, 50%) scale(1.05);
 }
 
-@keyframes twinkle {
-    0% { opacity: 0.3; }
-    50% { opacity: 1; }
-    100% { opacity: 0.3; }
+#pauseButton:hover {
+    transform: scale(1.05);
 }
 
 /* Points popup */
@@ -272,6 +250,17 @@ button:active {
 
 /* Mobile optimizations */
 @media (max-width: 768px) {
+    .game-title {
+        font-size: 36px;
+        margin-bottom: 20px;
+    }
+
+    .star {
+        width: 2px;
+        height: 2px;
+        box-shadow: 0 0 3px rgba(255, 255, 255, 0.8);
+    }
+
     .score-container {
         font-size: 1em;
         padding: 8px 16px;
@@ -287,26 +276,29 @@ button:active {
         font-size: 0.9em;
     }
 
-    #startButton {
+    #startButton, #pauseButton {
         padding: 12px 24px;
-        font-size: 1.1em;
+        font-size: 1em;
     }
 
     #pauseButton {
-        padding: 8px 16px;
-        font-size: 0.9em;
-        right: 10px;
-    }
-
-    .star {
-        width: 2px;
-        height: 2px;
-        box-shadow: 0 0 3px rgba(255, 255, 255, 0.8);
+        top: 15px;
+        right: 15px;
     }
 }
 
 /* Landscape mode adjustments */
 @media (orientation: landscape) and (max-height: 500px) {
+    .game-title {
+        font-size: 32px;
+        margin-bottom: 15px;
+    }
+
+    #startButton, #pauseButton {
+        padding: 10px 20px;
+        font-size: 0.9em;
+    }
+
     .mode-selector {
         bottom: 5px;
     }
@@ -314,11 +306,6 @@ button:active {
     .mode-button {
         padding: 5px 12px;
         font-size: 0.8em;
-    }
-
-    #startButton {
-        padding: 10px 20px;
-        font-size: 1em;
     }
 }
 

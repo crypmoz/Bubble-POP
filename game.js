@@ -459,23 +459,29 @@ class Game {
             container.className = 'stars';
             document.body.insertBefore(container, document.body.firstChild);
             
-            const numberOfStars = 150; // Increased number of stars
+            // Create more stars for better visibility
+            const numberOfStars = 150;
             for (let i = 0; i < numberOfStars; i++) {
                 const star = document.createElement('div');
                 star.className = 'star';
-                star.style.left = `${Math.random() * 100}%`;
-                star.style.top = `${Math.random() * 100}%`;
                 
-                // Randomize star size between 1px and 3px
+                // Distribute stars more evenly
+                const x = Math.random() * 100;
+                const y = Math.random() * 100;
+                
+                // Vary star sizes
                 const size = Math.random() * 2 + 1;
+                
+                star.style.left = `${x}%`;
+                star.style.top = `${y}%`;
                 star.style.width = `${size}px`;
                 star.style.height = `${size}px`;
                 
-                // Randomize twinkle duration between 2s and 4s
-                star.style.setProperty('--twinkle-duration', `${Math.random() * 2 + 2}s`);
-                
-                // Randomize initial opacity
-                star.style.opacity = Math.random() * 0.5 + 0.2;
+                // Vary twinkle duration and delay
+                const duration = Math.random() * 2 + 2;
+                const delay = Math.random() * 2;
+                star.style.setProperty('--twinkle-duration', `${duration}s`);
+                star.style.animationDelay = `${delay}s`;
                 
                 container.appendChild(star);
             }
