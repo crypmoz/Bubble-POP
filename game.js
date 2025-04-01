@@ -201,6 +201,7 @@ class Game {
         this.lastBubbleTime = 0;
         this.bubbleInterval = 1000;
         this.particles = [];
+        this.isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
         
         // Get DOM elements
         this.startButton = document.getElementById('startButton');
@@ -213,21 +214,29 @@ class Game {
         this.startButton.addEventListener('click', () => this.startGame());
         this.pauseButton.addEventListener('click', () => this.togglePause());
         
-        // Initialize power-ups
+        // Initialize power-ups with mobile-friendly durations
         this.powerUps = {
-            shield: { element: document.getElementById('shield'), active: false, duration: 5000 },
-            slowMotion: { element: document.getElementById('slowMotion'), active: false, duration: 5000 },
-            doublePoints: { element: document.getElementById('doublePoints'), active: false, duration: 5000 }
+            shield: { element: document.getElementById('shield'), active: false, duration: 8000 },
+            slowMotion: { element: document.getElementById('slowMotion'), active: false, duration: 8000 },
+            doublePoints: { element: document.getElementById('doublePoints'), active: false, duration: 8000 }
         };
         
-        // Set up power-up click handlers and mobile tooltip handling
+        // Set up power-up click handlers with improved mobile handling
         Object.entries(this.powerUps).forEach(([key, powerUp]) => {
-            powerUp.element.addEventListener('click', () => this.activatePowerUp(key));
+            const handlePowerUp = (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                this.activatePowerUp(key);
+            };
+            
+            powerUp.element.addEventListener('click', handlePowerUp);
+            powerUp.element.addEventListener('touchstart', handlePowerUp, { passive: false });
             
             // Mobile tooltip handling
             let tooltipTimeout;
             powerUp.element.addEventListener('touchstart', (e) => {
                 e.preventDefault();
+                e.stopPropagation();
                 clearTimeout(tooltipTimeout);
                 
                 // Remove tooltip-visible class from all power-ups
@@ -242,40 +251,35 @@ class Game {
                 tooltipTimeout = setTimeout(() => {
                     powerUp.element.classList.remove('tooltip-visible');
                 }, 2000);
-            });
+            }, { passive: false });
         });
         
-        // Hide tooltips when touching canvas
-        this.canvas.addEventListener('touchstart', () => {
-            Object.values(this.powerUps).forEach(powerUp => 
-                powerUp.element.classList.remove('tooltip-visible')
-            );
-        });
-        
-        // Improved touch handling
+        // Improved touch handling for the canvas
         this.canvas.addEventListener('touchstart', (e) => {
             e.preventDefault();
             const touch = e.touches[0];
             const rect = this.canvas.getBoundingClientRect();
-            const scaleX = this.canvas.width / rect.width;
-            const scaleY = this.canvas.height / rect.height;
             
-            const x = (touch.clientX - rect.left) * scaleX;
-            const y = (touch.clientY - rect.top) * scaleY;
+            // Calculate proper touch coordinates
+            const x = ((touch.clientX - rect.left) / rect.width) * this.canvas.width;
+            const y = ((touch.clientY - rect.top) / rect.height) * this.canvas.height;
             
-            this.handleClick({ clientX: touch.clientX, clientY: touch.clientY });
+            this.handleClick({ clientX: x, clientY: y, isTouchEvent: true });
         }, { passive: false });
 
         // Prevent scrolling while playing
-        this.canvas.addEventListener('touchmove', (e) => {
+        document.body.addEventListener('touchmove', (e) => {
             if (this.isPlaying) {
                 e.preventDefault();
             }
         }, { passive: false });
 
-        // Handle clicks/touches
+        // Handle clicks
         this.canvas.addEventListener('click', (e) => {
-            this.handleClick(e);
+            const rect = this.canvas.getBoundingClientRect();
+            const x = ((e.clientX - rect.left) / rect.width) * this.canvas.width;
+            const y = ((e.clientY - rect.top) / rect.height) * this.canvas.height;
+            this.handleClick({ clientX: x, clientY: y, isTouchEvent: false });
         });
         
         // Handle window resize
@@ -321,8 +325,10 @@ class Game {
     }
     
     createBubble() {
-        const minSize = Math.min(this.canvas.width, this.canvas.height) * 0.05;
-        const maxSize = minSize * 2;
+        // Adjust bubble size based on screen size
+        const screenSize = Math.min(this.canvas.width, this.canvas.height);
+        const minSize = screenSize * 0.03; // Smaller bubbles on mobile
+        const maxSize = minSize * 1.5;     // Less variation in size
         const radius = Math.random() * (maxSize - minSize) + minSize;
         
         const x = Math.random() * (this.canvas.width - radius * 2) + radius;
@@ -373,29 +379,50 @@ class Game {
     handleClick(event) {
         if (!this.isPlaying || this.isPaused) return;
         
-        const rect = this.canvas.getBoundingClientRect();
-        const scaleX = this.canvas.width / rect.width;
-        const scaleY = this.canvas.height / rect.height;
-        const x = (event.clientX - rect.left) * scaleX;
-        const y = (event.clientY - rect.top) * scaleY;
+        const x = event.clientX;
+        const y = event.clientY;
+        
+        let hitBubble = false;
         
         this.bubbles = this.bubbles.filter(bubble => {
             const dx = x - bubble.x;
             const dy = y - bubble.y;
             const distance = Math.sqrt(dx * dx + dy * dy);
             
-            if (distance < bubble.radius) {
-                this.score++;
+            // Increase hit area slightly for mobile
+            const hitRadius = this.isMobile ? bubble.radius * 1.2 : bubble.radius;
+            
+            if (distance < hitRadius) {
+                hitBubble = true;
+                // Add points based on power-ups
+                const points = this.powerUps.doublePoints.active ? 2 : 1;
+                this.score += points;
                 this.scoreElement.textContent = this.score;
+                
                 if (this.score > this.highScore) {
                     this.highScore = this.score;
                     this.highScoreElement.textContent = this.highScore;
                     localStorage.setItem('highScore', this.highScore);
                 }
+                
+                // Create pop effect
+                this.createPopEffect(bubble);
                 return false;
             }
             return true;
         });
+        
+        // Provide haptic feedback on mobile if available
+        if (hitBubble && navigator.vibrate) {
+            navigator.vibrate(50);
+        }
+    }
+    
+    createPopEffect(bubble) {
+        // Create particles for pop effect
+        for (let i = 0; i < 8; i++) {
+            this.particles.push(new Particle(bubble.x, bubble.y, bubble.color));
+        }
     }
     
     togglePause() {
