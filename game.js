@@ -214,11 +214,31 @@ class Game {
         this.startButton.addEventListener('click', () => this.startGame());
         this.pauseButton.addEventListener('click', () => this.togglePause());
         
-        // Initialize power-ups
+        // Add frame rate control
+        this.lastFrameTime = 0;
+        this.frameInterval = 1000 / 60; // Target 60 FPS
+        
+        // Optimize particle system
+        this.maxParticles = 100;
+        
+        // Game balance settings
+        this.powerUpDurations = {
+            shield: 10000,
+            slowMotion: 8000,
+            doublePoints: 12000
+        };
+        
+        this.bubbleSpeed = {
+            min: 1,
+            max: 3,
+            increaseRate: 0.1 // Speed increase per 100 points
+        };
+        
+        // Initialize power-ups with new durations
         this.powerUps = {
-            shield: { element: document.getElementById('shield'), active: false, duration: 8000 },
-            slowMotion: { element: document.getElementById('slowMotion'), active: false, duration: 8000 },
-            doublePoints: { element: document.getElementById('doublePoints'), active: false, duration: 8000 }
+            shield: { element: document.getElementById('shield'), active: false, duration: this.powerUpDurations.shield },
+            slowMotion: { element: document.getElementById('slowMotion'), active: false, duration: this.powerUpDurations.slowMotion },
+            doublePoints: { element: document.getElementById('doublePoints'), active: false, duration: this.powerUpDurations.doublePoints }
         };
         
         // Set up power-up click handlers
@@ -305,7 +325,9 @@ class Game {
         this.score = 0;
         this.scoreElement.textContent = '0';
         this.bubbles = [];
+        this.particles = [];
         this.isPaused = false;
+        this.lastFrameTime = 0;
         
         this.startButton.style.display = 'none';
         this.pauseButton.style.display = 'inline-block';
@@ -317,17 +339,17 @@ class Game {
             powerUp.element.classList.remove('active');
         });
         
-        this.animate();
+        this.animate(0);
     }
     
     createBubble() {
         const screenSize = Math.min(this.canvas.width, this.canvas.height);
-        const minSize = screenSize * (this.isMobile ? 0.05 : 0.04);
-        const maxSize = minSize * 1.3;
+        const minSize = screenSize * (this.isMobile ? 0.04 : 0.03);
+        const maxSize = minSize * 1.5;
         const radius = Math.random() * (maxSize - minSize) + minSize;
         
-        // Use 60% of canvas width for bubble spawning
-        const usableWidth = this.canvas.width * 0.6;
+        // Use 80% of canvas width for bubble spawning
+        const usableWidth = this.canvas.width * 0.8;
         const margin = (this.canvas.width - usableWidth) / 2;
         
         const x = margin + Math.random() * usableWidth;
@@ -350,19 +372,42 @@ class Game {
         return bubble;
     }
     
-    animate() {
+    animate(currentTime) {
         if (!this.isPlaying || this.isPaused) return;
         
+        // Frame rate control
+        if (currentTime - this.lastFrameTime < this.frameInterval) {
+            this.animationFrameId = requestAnimationFrame((time) => this.animate(time));
+            return;
+        }
+        this.lastFrameTime = currentTime;
+        
         this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+        
+        // Update and draw particles
+        this.particles = this.particles.filter(particle => {
+            particle.update();
+            particle.draw(this.ctx);
+            return particle.life > 0;
+        });
         
         // Update and draw bubbles
         this.bubbles = this.bubbles.filter(bubble => {
             if (bubble.y + bubble.radius < 0) {
-                return false; // Remove bubbles that are off screen
+                return false;
             }
             bubble.update();
             bubble.draw(this.ctx);
             return true;
+        });
+        
+        // Adjust bubble speed based on score
+        const speedMultiplier = 1 + (Math.floor(this.score / 100) * this.bubbleSpeed.increaseRate);
+        this.bubbles.forEach(bubble => {
+            bubble.speed = Math.min(
+                this.bubbleSpeed.max,
+                this.bubbleSpeed.min * speedMultiplier
+            );
         });
         
         const currentTime = Date.now();
@@ -371,13 +416,18 @@ class Game {
             this.lastBubbleTime = currentTime;
         }
         
-        this.animationFrameId = requestAnimationFrame(() => this.animate());
+        this.animationFrameId = requestAnimationFrame((time) => this.animate(time));
     }
     
     handleClick(x, y) {
         if (!this.isPlaying || this.isPaused) return;
         
         let hitBubble = false;
+        
+        // Add visual feedback for touch
+        if (this.isMobile) {
+            this.createTouchFeedback(x, y);
+        }
         
         this.bubbles = this.bubbles.filter(bubble => {
             if (!bubble || typeof bubble.x !== 'number' || typeof bubble.y !== 'number') return false;
@@ -386,8 +436,8 @@ class Game {
             const dy = y - bubble.y;
             const distance = Math.sqrt(dx * dx + dy * dy);
             
-            // Increase hit area for mobile
-            const hitRadius = this.isMobile ? bubble.radius * 2 : bubble.radius * 1.2;
+            // Increase hit area for mobile and add visual feedback
+            const hitRadius = this.isMobile ? bubble.radius * 2.5 : bubble.radius * 1.5;
             
             if (distance <= hitRadius) {
                 hitBubble = true;
@@ -412,9 +462,27 @@ class Game {
         }
     }
     
+    createTouchFeedback(x, y) {
+        const feedback = document.createElement('div');
+        feedback.className = 'touch-feedback';
+        feedback.style.left = `${x}px`;
+        feedback.style.top = `${y}px`;
+        document.body.appendChild(feedback);
+        
+        setTimeout(() => {
+            feedback.remove();
+        }, 500);
+    }
+    
     createPopEffect(bubble) {
+        // Limit number of particles
+        if (this.particles.length >= this.maxParticles) {
+            this.particles = this.particles.slice(-this.maxParticles);
+        }
+        
         // Create particles for pop effect
-        for (let i = 0; i < 8; i++) {
+        const particleCount = Math.min(8, this.maxParticles - this.particles.length);
+        for (let i = 0; i < particleCount; i++) {
             this.particles.push(new Particle(bubble.x, bubble.y, bubble.color));
         }
     }
@@ -430,7 +498,7 @@ class Game {
             this.gameOverlay.style.display = 'flex';
         } else {
             this.gameOverlay.style.display = 'none';
-            this.animate();
+            this.animate(0);
         }
     }
     
@@ -452,6 +520,12 @@ class Game {
         
         // Scale context for retina displays
         this.ctx.scale(dpr, dpr);
+        
+        // Clear any existing bubbles and reset
+        if (this.isPlaying) {
+            this.bubbles = [];
+            this.lastBubbleTime = Date.now();
+        }
     }
     
     adjustBubblePositions() {
@@ -510,7 +584,7 @@ class Game {
             if (powerUp === 'slowMotion') {
                 this.bubbles.forEach(bubble => bubble.speed *= 2);
             }
-        }, this.powerUps[powerUp].duration);
+        }, this.powerUpDurations[powerUp]);
     }
 }
 
