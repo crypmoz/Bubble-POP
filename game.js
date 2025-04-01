@@ -242,9 +242,14 @@ class Bubble {
 class Game {
     constructor() {
         this.canvas = document.getElementById('gameCanvas');
+        if (!this.canvas) {
+            console.error('Canvas element not found');
+            return;
+        }
+        
         this.ctx = this.canvas.getContext('2d', { alpha: true });
         this.score = 0;
-        this.highScore = localStorage.getItem('highScore') || 0;
+        this.highScore = parseInt(localStorage.getItem('highScore')) || 0;
         this.isPlaying = false;
         this.isPaused = false;
         this.animationFrameId = null;
@@ -256,6 +261,103 @@ class Game {
         this.BUBBLE_INCREASE_INTERVAL = 10000; // 10 seconds
         this.lastFrameTime = 0;
         
+        // Initialize game modes
+        this.initializeGameModes();
+        
+        // Set up DOM elements and controls
+        this.setupDOMElements();
+        this.setupControls();
+        this.setupEventListeners();
+        
+        // Initialize game environment
+        this.createStarryBackground();
+        this.resizeCanvas();
+        
+        // Start animation loop
+        requestAnimationFrame(() => this.animate(0));
+    }
+
+    setupDOMElements() {
+        // Create game container if it doesn't exist
+        let container = document.querySelector('.game-container');
+        if (!container) {
+            container = document.createElement('div');
+            container.className = 'game-container';
+            document.body.appendChild(container);
+        }
+
+        // Create canvas if it doesn't exist
+        if (!this.canvas) {
+            this.canvas = document.createElement('canvas');
+            this.canvas.id = 'gameCanvas';
+            container.appendChild(this.canvas);
+            this.ctx = this.canvas.getContext('2d', { alpha: true });
+        }
+
+        // Create score container if it doesn't exist
+        let scoreContainer = document.querySelector('.score-container');
+        if (!scoreContainer) {
+            scoreContainer = document.createElement('div');
+            scoreContainer.className = 'score-container';
+            scoreContainer.innerHTML = `
+                <div>Score: <span id="score">0</span></div>
+                <div>High Score: <span id="highScore">${this.highScore}</span></div>
+            `;
+            document.body.appendChild(scoreContainer);
+        }
+
+        // Get or create other necessary elements
+        this.scoreElement = document.getElementById('score');
+        this.highScoreElement = document.getElementById('highScore');
+        
+        if (!this.scoreElement || !this.highScoreElement) {
+            console.error('Score elements not found');
+            return;
+        }
+
+        // Update initial high score display
+        this.highScoreElement.textContent = this.highScore;
+    }
+
+    setupControls() {
+        // Create mode selector if it doesn't exist
+        if (!this.modeSelector) {
+            this.modeSelector = document.createElement('div');
+            this.modeSelector.className = 'mode-selector';
+            
+            const zenButton = document.createElement('button');
+            zenButton.textContent = 'Zen';
+            zenButton.addEventListener('click', () => this.setGameMode('zen'));
+            
+            const fastButton = document.createElement('button');
+            fastButton.textContent = 'Fast';
+            fastButton.addEventListener('click', () => this.setGameMode('fast'));
+            
+            this.modeSelector.appendChild(zenButton);
+            this.modeSelector.appendChild(fastButton);
+            document.body.appendChild(this.modeSelector);
+        }
+
+        // Create pause button if it doesn't exist
+        if (!this.pauseButton) {
+            this.pauseButton = document.createElement('button');
+            this.pauseButton.id = 'pauseButton';
+            document.body.appendChild(this.pauseButton);
+            this.pauseButton.style.display = 'none';
+            this.pauseButton.addEventListener('click', () => this.togglePause());
+        }
+
+        // Create start button if it doesn't exist
+        if (!this.startButton) {
+            this.startButton = document.createElement('button');
+            this.startButton.id = 'startButton';
+            this.startButton.textContent = 'Start Game';
+            document.body.appendChild(this.startButton);
+            this.startButton.addEventListener('click', () => this.startGame());
+        }
+    }
+
+    initializeGameModes() {
         this.modes = {
             zen: {
                 spawnInterval: 1000,
@@ -277,6 +379,7 @@ class Game {
             }
         };
         
+        this.currentMode = 'zen';
         this.config = {
             bubble: {
                 minSize: 20,
@@ -290,33 +393,6 @@ class Game {
             },
             hitArea: { multiplier: 1.2 }
         };
-
-        // Get DOM elements
-        this.startButton = document.getElementById('startButton');
-        this.pauseButton = document.getElementById('pauseButton');
-        this.scoreElement = document.getElementById('score');
-        this.highScoreElement = document.getElementById('highScore');
-        this.gameOverlay = document.getElementById('gameOverlay');
-        
-        // Initialize the game
-        this.setupEventListeners();
-        this.createStarryBackground();
-        this.resizeCanvas();
-        
-        // Set initial values
-        this.highScoreElement.textContent = this.highScore;
-        this.currentMode = 'zen';
-        
-        // Set up mode buttons
-        document.querySelectorAll('.mode-button').forEach(button => {
-            button.addEventListener('click', () => {
-                const mode = button.getAttribute('data-mode');
-                if (mode) this.setGameMode(mode);
-            });
-        });
-        
-        // Start animation loop
-        requestAnimationFrame(() => this.animate(0));
     }
 
     setGameMode(mode) {
@@ -602,36 +678,6 @@ class Game {
             '#FFEEAD', '#FFD93D', '#FF9999', '#9B59B6'
         ];
         return colors[Math.floor(Math.random() * colors.length)];
-    }
-
-    setupControls() {
-        // Create pause button if it doesn't exist
-        if (!this.pauseButton) {
-            this.pauseButton = document.createElement('button');
-            this.pauseButton.id = 'pauseButton';
-            document.body.appendChild(this.pauseButton);
-        }
-        
-        this.pauseButton.style.display = 'flex';
-        this.pauseButton.addEventListener('click', () => this.togglePause());
-        
-        // Create mode selector if it doesn't exist
-        if (!this.modeSelector) {
-            this.modeSelector = document.createElement('div');
-            this.modeSelector.className = 'mode-selector';
-            
-            const zenButton = document.createElement('button');
-            zenButton.textContent = 'Zen';
-            zenButton.addEventListener('click', () => this.setGameMode('zen'));
-            
-            const fastButton = document.createElement('button');
-            fastButton.textContent = 'Fast';
-            fastButton.addEventListener('click', () => this.setGameMode('fast'));
-            
-            this.modeSelector.appendChild(zenButton);
-            this.modeSelector.appendChild(fastButton);
-            document.body.appendChild(this.modeSelector);
-        }
     }
 }
 
