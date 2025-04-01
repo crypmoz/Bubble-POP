@@ -443,38 +443,42 @@ class Game {
     }
 
     createStarryBackground() {
-        const starsContainer = document.querySelector('.stars');
-        if (!starsContainer) {
-            const container = document.createElement('div');
-            container.className = 'stars';
-            document.body.insertBefore(container, document.body.firstChild);
+        // Remove existing stars container if it exists
+        const existingStars = document.querySelector('.stars');
+        if (existingStars) {
+            existingStars.remove();
+        }
+
+        // Create new stars container
+        const container = document.createElement('div');
+        container.className = 'stars';
+        document.body.insertBefore(container, document.body.firstChild);
+        
+        // Create more stars for better visibility
+        const numberOfStars = 300; // Increased number of stars
+        for (let i = 0; i < numberOfStars; i++) {
+            const star = document.createElement('div');
+            star.className = 'star';
             
-            // Create more stars for better visibility
-            const numberOfStars = 200; // Increased number of stars
-            for (let i = 0; i < numberOfStars; i++) {
-                const star = document.createElement('div');
-                star.className = 'star';
-                
-                // Distribute stars more evenly
-                const x = Math.random() * 100;
-                const y = Math.random() * 100;
-                
-                // Vary star sizes
-                const size = Math.random() * 3 + 1; // Slightly larger stars
-                
-                star.style.left = `${x}%`;
-                star.style.top = `${y}%`;
-                star.style.width = `${size}px`;
-                star.style.height = `${size}px`;
-                
-                // Slower twinkle animation
-                const duration = Math.random() * 3 + 4; // 4-7 seconds
-                const delay = Math.random() * 2;
-                star.style.setProperty('--twinkle-duration', `${duration}s`);
-                star.style.animationDelay = `${delay}s`;
-                
-                container.appendChild(star);
-            }
+            // Distribute stars more evenly
+            const x = Math.random() * 100;
+            const y = Math.random() * 100;
+            
+            // Vary star sizes more
+            const size = Math.random() * 4 + 2; // Larger stars (2-6px)
+            
+            star.style.left = `${x}%`;
+            star.style.top = `${y}%`;
+            star.style.width = `${size}px`;
+            star.style.height = `${size}px`;
+            
+            // Slower twinkle animation with longer duration
+            const duration = Math.random() * 4 + 6; // 6-10 seconds
+            const delay = Math.random() * 3;
+            star.style.setProperty('--twinkle-duration', `${duration}s`);
+            star.style.animationDelay = `${delay}s`;
+            
+            container.appendChild(star);
         }
     }
 
