@@ -287,19 +287,19 @@ class Game {
         this.modes = {
             zen: {
                 spawnInterval: 1000,
-                minSpawnInterval: 800,
-                baseSpeed: 1.5,
-                maxSpeed: 2.5,
+                minSpawnInterval: 1000, // Keep spawn interval constant
+                baseSpeed: 1.05, // 30% slower (was 1.5)
+                maxSpeed: 1.05, // Keep speed constant
                 negativeBubbleChance: 0.05,
-                maxBubbles: 10
+                maxBubbles: 14 // 40% more bubbles (was 10)
             },
             fast: {
-                spawnInterval: 500,
-                minSpawnInterval: 300,
-                baseSpeed: 2.5,
-                maxSpeed: 4,
+                spawnInterval: 1000,
+                minSpawnInterval: 1000, // Keep spawn interval constant
+                baseSpeed: 2.75, // 10% faster (was 2.5)
+                maxSpeed: 2.75, // Keep speed constant
                 negativeBubbleChance: 0.2,
-                maxBubbles: 15
+                maxBubbles: 15 // Keep same amount
             }
         };
         
@@ -372,14 +372,10 @@ class Game {
         this.currentMode = mode;
         const settings = this.modes[mode];
         
-        // Update config with mode settings
-        this.config.bubble.spawnInterval = settings.spawnInterval;
-        this.config.bubble.minSpawnInterval = settings.minSpawnInterval;
+        // Update only speed-related settings without restarting the game
         this.config.bubble.baseSpeed = settings.baseSpeed;
         this.config.bubble.maxSpeed = settings.maxSpeed;
-        this.config.bubble.negativeBubbleChance = settings.negativeBubbleChance;
-        this.config.bubble.maxBubbles = settings.maxBubbles;
-
+        
         // Update button states
         const buttons = document.querySelectorAll('.mode-button');
         buttons.forEach(button => {
@@ -389,10 +385,10 @@ class Game {
             }
         });
 
-        // Restart game if already playing
-        if (this.isPlaying) {
-            this.startGame();
-        }
+        // Update existing bubbles' speed
+        this.bubbles.forEach(bubble => {
+            bubble.speed = settings.baseSpeed;
+        });
     }
 
     createBubble() {
@@ -441,12 +437,6 @@ class Game {
             this.bubbles.length < this.config.bubble.maxBubbles) {
             this.bubbles.push(this.createBubble());
             this.lastBubbleTime = currentTime;
-            
-            // Increase difficulty
-            this.config.bubble.spawnInterval = Math.max(
-                this.config.bubble.minSpawnInterval,
-                this.config.bubble.spawnInterval - 10
-            );
         }
 
         this.animationFrameId = requestAnimationFrame((time) => this.animate(time));
@@ -460,7 +450,7 @@ class Game {
             document.body.insertBefore(container, document.body.firstChild);
             
             // Create more stars for better visibility
-            const numberOfStars = 150;
+            const numberOfStars = 200; // Increased number of stars
             for (let i = 0; i < numberOfStars; i++) {
                 const star = document.createElement('div');
                 star.className = 'star';
@@ -470,15 +460,15 @@ class Game {
                 const y = Math.random() * 100;
                 
                 // Vary star sizes
-                const size = Math.random() * 2 + 1;
+                const size = Math.random() * 3 + 1; // Slightly larger stars
                 
                 star.style.left = `${x}%`;
                 star.style.top = `${y}%`;
                 star.style.width = `${size}px`;
                 star.style.height = `${size}px`;
                 
-                // Vary twinkle duration and delay
-                const duration = Math.random() * 2 + 2;
+                // Slower twinkle animation
+                const duration = Math.random() * 3 + 4; // 4-7 seconds
                 const delay = Math.random() * 2;
                 star.style.setProperty('--twinkle-duration', `${duration}s`);
                 star.style.animationDelay = `${delay}s`;
