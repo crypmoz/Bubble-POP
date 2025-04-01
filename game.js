@@ -1,5 +1,9 @@
 class Particle {
     constructor(x, y, color) {
+        this.reset(x, y, color);
+    }
+    
+    reset(x, y, color) {
         this.x = x;
         this.y = y;
         this.color = color;
@@ -7,6 +11,7 @@ class Particle {
         this.speedX = Math.random() * 6 - 3;
         this.speedY = Math.random() * 6 - 3;
         this.life = 1;
+        return this;
     }
 
     update() {
@@ -45,21 +50,24 @@ class Bubble {
             radius: this.radius * 0.8
         };
         
-        // Different bubble types
+        // Different bubble types with adjusted probabilities
         const random = Math.random();
-        if (random < 0.1) {
-            this.type = 'special'; // Star bubble
+        if (random < 0.05) { // 5% chance for star bubble
+            this.type = 'star';
             this.points = 10;
-        } else if (random < 0.2) {
-            this.type = 'bomb'; // Bomb bubble
+            this.specialColor = '#FFD700'; // Gold color for star
+        } else if (random < 0.1) { // 5% chance for bomb bubble
+            this.type = 'bomb';
             this.points = -5;
-        } else if (random < 0.3) {
-            this.type = 'rainbow'; // Rainbow bubble
+            this.specialColor = '#FF0000'; // Red color for bomb
+        } else if (random < 0.15) { // 5% chance for rainbow bubble
+            this.type = 'rainbow';
             this.points = 5;
-            this.color = 'rainbow';
+            this.specialColor = null; // Rainbow effect handled separately
         } else {
             this.type = 'normal';
             this.points = 1;
+            this.specialColor = null;
         }
     }
 
@@ -105,6 +113,15 @@ class Bubble {
         gradient.addColorStop(0.4, mainColor);
         gradient.addColorStop(1, shadowColor);
 
+        // Draw special bubble effects
+        if (this.type === 'star') {
+            this.drawStarEffect(ctx);
+        } else if (this.type === 'bomb') {
+            this.drawBombEffect(ctx);
+        } else if (this.type === 'rainbow') {
+            this.drawRainbowEffect(ctx);
+        }
+
         // Draw main bubble
         ctx.beginPath();
         ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
@@ -133,6 +150,71 @@ class Bubble {
         );
         ctx.fillStyle = shineGradient;
         ctx.fill();
+    }
+
+    drawStarEffect(ctx) {
+        const spikes = 5;
+        const outerRadius = this.radius * 1.2;
+        const innerRadius = this.radius * 0.8;
+        
+        ctx.beginPath();
+        for (let i = 0; i < spikes * 2; i++) {
+            const radius = i % 2 === 0 ? outerRadius : innerRadius;
+            const angle = (i * Math.PI) / spikes;
+            const x = this.x + Math.cos(angle) * radius;
+            const y = this.y + Math.sin(angle) * radius;
+            
+            if (i === 0) {
+                ctx.moveTo(x, y);
+            } else {
+                ctx.lineTo(x, y);
+            }
+        }
+        ctx.closePath();
+        ctx.fillStyle = this.specialColor;
+        ctx.globalAlpha = 0.3;
+        ctx.fill();
+        ctx.globalAlpha = 1;
+    }
+
+    drawBombEffect(ctx) {
+        // Draw fuse
+        ctx.beginPath();
+        ctx.moveTo(this.x + this.radius, this.y - this.radius * 0.5);
+        ctx.lineTo(this.x + this.radius * 1.5, this.y - this.radius);
+        ctx.strokeStyle = '#8B4513';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+        
+        // Draw spark
+        if (Math.random() < 0.3) {
+            ctx.beginPath();
+            ctx.arc(this.x + this.radius * 1.5, this.y - this.radius, 2, 0, Math.PI * 2);
+            ctx.fillStyle = '#FFA500';
+            ctx.fill();
+        }
+    }
+
+    drawRainbowEffect(ctx) {
+        const gradient = ctx.createLinearGradient(
+            this.x - this.radius,
+            this.y - this.radius,
+            this.x + this.radius,
+            this.y + this.radius
+        );
+        
+        gradient.addColorStop(0, '#FF0000');
+        gradient.addColorStop(0.2, '#FFA500');
+        gradient.addColorStop(0.4, '#FFFF00');
+        gradient.addColorStop(0.6, '#00FF00');
+        gradient.addColorStop(0.8, '#0000FF');
+        gradient.addColorStop(1, '#800080');
+        
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, this.radius * 1.1, 0, Math.PI * 2);
+        ctx.strokeStyle = gradient;
+        ctx.lineWidth = 3;
+        ctx.stroke();
     }
 
     hexToRgb(hex) {
@@ -318,6 +400,88 @@ class Game {
         this.resizeCanvas();
         this.highScoreElement.textContent = this.highScore;
         this.gameOverlay.style.display = 'flex';
+
+        // Add special bubble settings
+        this.specialBubbleSettings = {
+            star: {
+                probability: 0.05,
+                points: 10,
+                color: '#FFD700'
+            },
+            bomb: {
+                probability: 0.05,
+                points: -5,
+                color: '#FF0000'
+            },
+            rainbow: {
+                probability: 0.05,
+                points: 5,
+                color: null
+            }
+        };
+
+        // Add object pooling
+        this.particlePool = [];
+        this.maxParticlePoolSize = 200;
+        this.popupPool = [];
+        this.maxPopupPoolSize = 50;
+        
+        // Game balance settings
+        this.gameSettings = {
+            powerUpCooldowns: {
+                shield: 30000,    // 30 seconds
+                slowMotion: 25000, // 25 seconds
+                doublePoints: 35000 // 35 seconds
+            },
+            difficulty: {
+                initialSpeed: 1,
+                maxSpeed: 4,
+                speedIncrease: 0.1,
+                speedIncreaseInterval: 1000, // Every 1000 points
+                bubbleInterval: {
+                    initial: 1000,
+                    min: 500
+                }
+            },
+            scoring: {
+                comboMultiplier: {
+                    threshold: 5,
+                    maxMultiplier: 3
+                }
+            }
+        };
+        
+        // Game state
+        this.combo = 0;
+        this.lastBubblePopTime = 0;
+        this.comboTimeout = 2000; // 2 seconds to maintain combo
+    }
+    
+    getParticle() {
+        if (this.particlePool.length > 0) {
+            return this.particlePool.pop();
+        }
+        return null;
+    }
+    
+    recycleParticle(particle) {
+        if (this.particlePool.length < this.maxParticlePoolSize) {
+            this.particlePool.push(particle);
+        }
+    }
+    
+    getPopup() {
+        if (this.popupPool.length > 0) {
+            return this.popupPool.pop();
+        }
+        return document.createElement('div');
+    }
+    
+    recyclePopup(popup) {
+        if (this.popupPool.length < this.maxPopupPoolSize) {
+            popup.remove();
+            this.popupPool.push(popup);
+        }
     }
     
     startGame() {
@@ -388,7 +552,11 @@ class Game {
         this.particles = this.particles.filter(particle => {
             particle.update();
             particle.draw(this.ctx);
-            return particle.life > 0;
+            if (particle.life <= 0) {
+                this.recycleParticle(particle);
+                return false;
+            }
+            return true;
         });
         
         // Update and draw bubbles
@@ -401,17 +569,25 @@ class Game {
             return true;
         });
         
-        // Adjust bubble speed based on score
-        const speedMultiplier = 1 + (Math.floor(this.score / 100) * this.bubbleSpeed.increaseRate);
+        // Adjust game difficulty based on score
+        const speedMultiplier = 1 + (Math.floor(this.score / this.gameSettings.difficulty.speedIncreaseInterval) * 
+            this.gameSettings.difficulty.speedIncrease);
+        
         this.bubbles.forEach(bubble => {
             bubble.speed = Math.min(
-                this.bubbleSpeed.max,
-                this.bubbleSpeed.min * speedMultiplier
+                this.gameSettings.difficulty.maxSpeed,
+                this.gameSettings.difficulty.initialSpeed * speedMultiplier
             );
         });
         
-        const currentTime = Date.now();
-        if (currentTime - this.lastBubbleTime > this.bubbleInterval) {
+        // Adjust bubble spawn interval
+        const spawnInterval = Math.max(
+            this.gameSettings.difficulty.bubbleInterval.min,
+            this.gameSettings.difficulty.bubbleInterval.initial - 
+            (Math.floor(this.score / this.gameSettings.difficulty.speedIncreaseInterval) * 50)
+        );
+        
+        if (currentTime - this.lastBubbleTime > spawnInterval) {
             this.bubbles.push(this.createBubble());
             this.lastBubbleTime = currentTime;
         }
@@ -423,6 +599,20 @@ class Game {
         if (!this.isPlaying || this.isPaused) return;
         
         let hitBubble = false;
+        const currentTime = Date.now();
+        
+        // Update combo
+        if (currentTime - this.lastBubblePopTime > this.comboTimeout) {
+            this.combo = 0;
+        }
+        this.combo++;
+        this.lastBubblePopTime = currentTime;
+        
+        // Calculate combo multiplier
+        const comboMultiplier = Math.min(
+            this.gameSettings.scoring.comboMultiplier.maxMultiplier,
+            Math.floor(this.combo / this.gameSettings.scoring.comboMultiplier.threshold) + 1
+        );
         
         // Add visual feedback for touch
         if (this.isMobile) {
@@ -436,14 +626,16 @@ class Game {
             const dy = y - bubble.y;
             const distance = Math.sqrt(dx * dx + dy * dy);
             
-            // Increase hit area for mobile and add visual feedback
             const hitRadius = this.isMobile ? bubble.radius * 2.5 : bubble.radius * 1.5;
             
             if (distance <= hitRadius) {
                 hitBubble = true;
-                const points = this.powerUps.doublePoints.active ? 2 : 1;
-                this.score += points;
+                const basePoints = this.powerUps.doublePoints.active ? bubble.points * 2 : bubble.points;
+                const finalPoints = basePoints * comboMultiplier;
+                this.score += finalPoints;
                 this.scoreElement.textContent = this.score;
+                
+                this.showPointsPopup(bubble.x, bubble.y, finalPoints);
                 
                 if (this.score > this.highScore) {
                     this.highScore = this.score;
@@ -475,16 +667,29 @@ class Game {
     }
     
     createPopEffect(bubble) {
-        // Limit number of particles
-        if (this.particles.length >= this.maxParticles) {
-            this.particles = this.particles.slice(-this.maxParticles);
-        }
-        
-        // Create particles for pop effect
         const particleCount = Math.min(8, this.maxParticles - this.particles.length);
         for (let i = 0; i < particleCount; i++) {
-            this.particles.push(new Particle(bubble.x, bubble.y, bubble.color));
+            let particle = this.getParticle();
+            if (!particle) {
+                particle = new Particle(bubble.x, bubble.y, bubble.color);
+            } else {
+                particle.reset(bubble.x, bubble.y, bubble.color);
+            }
+            this.particles.push(particle);
         }
+    }
+    
+    showPointsPopup(x, y, points) {
+        const popup = this.getPopup();
+        popup.className = 'points-popup';
+        popup.textContent = points > 0 ? `+${points}` : points;
+        popup.style.left = `${x}px`;
+        popup.style.top = `${y}px`;
+        document.body.appendChild(popup);
+        
+        setTimeout(() => {
+            this.recyclePopup(popup);
+        }, 1000);
     }
     
     togglePause() {
@@ -584,6 +789,12 @@ class Game {
             if (powerUp === 'slowMotion') {
                 this.bubbles.forEach(bubble => bubble.speed *= 2);
             }
+            
+            // Add cooldown
+            this.powerUps[powerUp].element.classList.add('cooldown');
+            setTimeout(() => {
+                this.powerUps[powerUp].element.classList.remove('cooldown');
+            }, this.gameSettings.powerUpCooldowns[powerUp]);
         }, this.powerUpDurations[powerUp]);
     }
 }

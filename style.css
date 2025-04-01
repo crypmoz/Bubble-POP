@@ -176,6 +176,8 @@ button:hover, button:active {
     font-size: 24px;
     transition: all 0.3s;
     position: relative;
+    will-change: transform;
+    transform: translateZ(0);
 }
 
 .power-up:active {
@@ -346,5 +348,217 @@ button:hover, button:active {
 @supports (-webkit-touch-callout: none) {
     html, body {
         height: -webkit-fill-available;
+    }
+}
+
+.points-popup {
+    position: fixed;
+    font-size: 24px;
+    font-weight: bold;
+    color: white;
+    text-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
+    pointer-events: none;
+    animation: points-popup 1s ease-out forwards;
+    z-index: 1000;
+    will-change: transform, opacity;
+    transform: translateZ(0);
+}
+
+@keyframes points-popup {
+    0% {
+        transform: translateY(0) scale(1);
+        opacity: 1;
+    }
+    100% {
+        transform: translateY(-50px) scale(1.2);
+        opacity: 0;
+    }
+}
+
+/* Improve special bubble effects */
+.power-up.active {
+    animation: pulse 1s infinite;
+    background: rgba(255, 255, 255, 0.3);
+}
+
+.power-up.active::after {
+    content: '';
+    position: absolute;
+    top: -5px;
+    left: -5px;
+    right: -5px;
+    bottom: -5px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(255,255,255,0.2) 0%, rgba(255,255,255,0) 70%);
+    animation: power-up-glow 1s infinite;
+    z-index: -1;
+}
+
+@keyframes power-up-glow {
+    0% {
+        transform: scale(1);
+        opacity: 0.5;
+    }
+    50% {
+        transform: scale(1.2);
+        opacity: 0.8;
+    }
+    100% {
+        transform: scale(1);
+        opacity: 0.5;
+    }
+}
+
+/* Improve mobile responsiveness for special effects */
+@media (max-width: 768px) {
+    .points-popup {
+        font-size: 20px;
+    }
+    
+    .power-up.active::after {
+        top: -3px;
+        left: -3px;
+        right: -3px;
+        bottom: -3px;
+    }
+}
+
+/* Add visual feedback for special bubbles */
+.bubble-star {
+    animation: star-twinkle 1s infinite;
+}
+
+.bubble-bomb {
+    animation: bomb-shake 0.5s infinite;
+}
+
+.bubble-rainbow {
+    animation: rainbow-shift 2s infinite;
+}
+
+@keyframes star-twinkle {
+    0%, 100% {
+        opacity: 1;
+    }
+    50% {
+        opacity: 0.5;
+    }
+}
+
+@keyframes bomb-shake {
+    0%, 100% {
+        transform: rotate(0deg);
+    }
+    25% {
+        transform: rotate(-5deg);
+    }
+    75% {
+        transform: rotate(5deg);
+    }
+}
+
+@keyframes rainbow-shift {
+    0% {
+        filter: hue-rotate(0deg);
+    }
+    100% {
+        filter: hue-rotate(360deg);
+    }
+}
+
+.power-up.cooldown {
+    opacity: 0.5;
+    pointer-events: none;
+    position: relative;
+}
+
+.power-up.cooldown::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.3);
+    border-radius: 50%;
+    animation: cooldown-progress 1s linear;
+}
+
+@keyframes cooldown-progress {
+    0% {
+        clip-path: circle(50% at 50% 50%);
+    }
+    100% {
+        clip-path: circle(0% at 50% 50%);
+    }
+}
+
+/* Improve combo display */
+.combo-display {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    font-size: 24px;
+    font-weight: bold;
+    color: white;
+    text-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
+    opacity: 0;
+    transition: opacity 0.3s;
+    z-index: 100;
+}
+
+.combo-display.active {
+    opacity: 1;
+}
+
+.combo-display .multiplier {
+    color: #FFD700;
+    font-size: 0.8em;
+}
+
+/* Add visual feedback for combo */
+@keyframes combo-flash {
+    0% {
+        transform: scale(1);
+    }
+    50% {
+        transform: scale(1.2);
+    }
+    100% {
+        transform: scale(1);
+    }
+}
+
+.combo-flash {
+    animation: combo-flash 0.3s ease-out;
+}
+
+/* Improve mobile responsiveness */
+@media (max-width: 768px) {
+    .combo-display {
+        font-size: 20px;
+        top: 15px;
+        right: 15px;
+    }
+    
+    .power-up.cooldown::before {
+        border-radius: 50%;
+    }
+}
+
+/* Add visual feedback for power-up activation */
+.power-up.activating {
+    animation: power-up-activate 0.5s ease-out;
+}
+
+@keyframes power-up-activate {
+    0% {
+        transform: scale(1);
+    }
+    50% {
+        transform: scale(1.2);
+    }
+    100% {
+        transform: scale(1);
     }
 } 
