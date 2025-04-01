@@ -327,11 +327,16 @@ class Game {
     createBubble() {
         // Adjust bubble size based on screen size
         const screenSize = Math.min(this.canvas.width, this.canvas.height);
-        const minSize = screenSize * 0.03; // Smaller bubbles on mobile
-        const maxSize = minSize * 1.5;     // Less variation in size
+        const minSize = screenSize * (this.isMobile ? 0.04 : 0.03); // Slightly larger on mobile
+        const maxSize = minSize * 1.5;
         const radius = Math.random() * (maxSize - minSize) + minSize;
         
-        const x = Math.random() * (this.canvas.width - radius * 2) + radius;
+        // Calculate available width for spawning bubbles
+        const usableWidth = this.canvas.width * 0.8; // Use 80% of canvas width
+        const margin = (this.canvas.width - usableWidth) / 2; // Center margin
+        
+        // Spawn bubble within the usable width
+        const x = margin + Math.random() * usableWidth;
         const y = this.canvas.height + radius;
         
         // Create vibrant colors array
@@ -379,20 +384,24 @@ class Game {
     handleClick(event) {
         if (!this.isPlaying || this.isPaused) return;
         
-        const x = event.clientX;
-        const y = event.clientY;
+        // Get the canvas-relative coordinates
+        const rect = this.canvas.getBoundingClientRect();
+        const x = event.isTouchEvent ? event.clientX : ((event.clientX - rect.left) / rect.width) * this.canvas.width;
+        const y = event.isTouchEvent ? event.clientY : ((event.clientY - rect.top) / rect.height) * this.canvas.height;
         
         let hitBubble = false;
         
         this.bubbles = this.bubbles.filter(bubble => {
+            if (!bubble || typeof bubble.x !== 'number' || typeof bubble.y !== 'number') return false;
+            
             const dx = x - bubble.x;
             const dy = y - bubble.y;
             const distance = Math.sqrt(dx * dx + dy * dy);
             
-            // Increase hit area slightly for mobile
-            const hitRadius = this.isMobile ? bubble.radius * 1.2 : bubble.radius;
+            // Increase hit area for mobile
+            const hitRadius = this.isMobile ? bubble.radius * 1.5 : bubble.radius;
             
-            if (distance < hitRadius) {
+            if (distance <= hitRadius) {
                 hitBubble = true;
                 // Add points based on power-ups
                 const points = this.powerUps.doublePoints.active ? 2 : 1;
@@ -456,13 +465,31 @@ class Game {
         this.canvas.width = rect.width * dpr;
         this.canvas.height = rect.height * dpr;
         
+        // Scale context for retina displays
         this.ctx.scale(dpr, dpr);
+        
+        // Adjust existing bubbles after resize
+        this.adjustBubblePositions();
     }
     
     adjustBubblePositions() {
+        const usableWidth = this.canvas.width * 0.8;
+        const margin = (this.canvas.width - usableWidth) / 2;
+        
         this.bubbles.forEach(bubble => {
-            bubble.x = Math.min(bubble.x, this.canvas.width - bubble.radius);
-            bubble.y = Math.min(bubble.y, this.canvas.height - bubble.radius);
+            // Keep bubbles within the usable width
+            if (bubble.x < margin) {
+                bubble.x = margin + bubble.radius;
+            } else if (bubble.x > this.canvas.width - margin) {
+                bubble.x = this.canvas.width - margin - bubble.radius;
+            }
+            
+            // Ensure bubbles stay within vertical bounds
+            if (bubble.y < bubble.radius) {
+                bubble.y = bubble.radius;
+            } else if (bubble.y > this.canvas.height - bubble.radius) {
+                bubble.y = this.canvas.height - bubble.radius;
+            }
         });
     }
     
