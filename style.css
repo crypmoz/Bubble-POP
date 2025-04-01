@@ -93,45 +93,45 @@ body {
 
 .game-title {
     position: fixed;
-    top: 20px;
+    top: 50%;
     left: 50%;
-    transform: translateX(-50%);
+    transform: translate(-50%, -50%);
     color: white;
     font-size: 2.5em;
     text-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
     z-index: 2;
     font-family: 'Arial', sans-serif;
     text-align: center;
+    pointer-events: none;
+    opacity: 0.8;
 }
 
 .mode-selector {
     position: fixed;
-    bottom: calc(env(safe-area-inset-bottom, 20px) + 80px);
+    bottom: calc(env(safe-area-inset-bottom, 20px) + 20px);
     left: 50%;
     transform: translateX(-50%);
     display: flex;
-    gap: 10px;
+    gap: 20px;
     z-index: 2;
 }
 
-.mode-button {
+.mode-selector button {
     background: rgba(0, 0, 0, 0.7);
     color: white;
-    border: none;
+    border: 2px solid rgba(255, 255, 255, 0.3);
     padding: 10px 20px;
-    border-radius: 10px;
+    border-radius: 25px;
     cursor: pointer;
     font-size: 1em;
     transition: all 0.3s ease;
-    -webkit-tap-highlight-color: transparent;
+    min-width: 120px;
+    backdrop-filter: blur(5px);
 }
 
-.mode-button:hover {
+.mode-selector button:hover {
     background: rgba(255, 255, 255, 0.2);
-}
-
-.mode-button.active {
-    background: rgba(255, 255, 255, 0.3);
+    border-color: rgba(255, 255, 255, 0.5);
 }
 
 #startButton, #pauseButton {
@@ -170,15 +170,15 @@ body {
     background: rgba(0, 0, 0, 0.7);
     color: white;
     border: none;
-    width: 50px;
-    height: 50px;
+    width: 44px;
+    height: 44px;
     border-radius: 50%;
     cursor: pointer;
     font-size: 1.2em;
     z-index: 10;
     transition: all 0.3s ease;
     -webkit-tap-highlight-color: transparent;
-    display: none;
+    display: flex;
     justify-content: center;
     align-items: center;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
@@ -243,24 +243,16 @@ body {
 
     .game-title {
         font-size: 2em;
-        top: env(safe-area-inset-top, 10px);
     }
 
     .mode-selector {
-        bottom: calc(env(safe-area-inset-bottom, 20px) + 60px);
-        flex-direction: row;
+        bottom: calc(env(safe-area-inset-bottom, 20px) + 20px);
     }
 
-    .mode-button {
+    .mode-selector button {
         padding: 8px 16px;
+        min-width: 100px;
         font-size: 0.9em;
-    }
-
-    #startButton, #pauseButton {
-        bottom: env(safe-area-inset-bottom, 20px);
-        padding: 12px 24px;
-        font-size: 1em;
-        min-width: 120px;
     }
 
     #pauseButton {
@@ -305,22 +297,16 @@ body {
 
     .game-title {
         font-size: 1.5em;
-        top: 5px;
     }
 
     .mode-selector {
-        bottom: 60px;
+        bottom: 20px;
     }
 
-    .mode-button {
+    .mode-selector button {
         padding: 6px 12px;
+        min-width: 90px;
         font-size: 0.8em;
-    }
-
-    #startButton, #pauseButton {
-        bottom: 5px;
-        padding: 8px 16px;
-        font-size: 0.9em;
     }
 
     #pauseButton {
@@ -537,7 +523,7 @@ body {
         right: 15px;
     }
     
-    .mode-button::before {
+    .mode-selector button::before {
         border-radius: 50%;
     }
 }

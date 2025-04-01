@@ -603,6 +603,36 @@ class Game {
         ];
         return colors[Math.floor(Math.random() * colors.length)];
     }
+
+    setupControls() {
+        // Create pause button if it doesn't exist
+        if (!this.pauseButton) {
+            this.pauseButton = document.createElement('button');
+            this.pauseButton.id = 'pauseButton';
+            document.body.appendChild(this.pauseButton);
+        }
+        
+        this.pauseButton.style.display = 'flex';
+        this.pauseButton.addEventListener('click', () => this.togglePause());
+        
+        // Create mode selector if it doesn't exist
+        if (!this.modeSelector) {
+            this.modeSelector = document.createElement('div');
+            this.modeSelector.className = 'mode-selector';
+            
+            const zenButton = document.createElement('button');
+            zenButton.textContent = 'Zen Mode';
+            zenButton.addEventListener('click', () => this.setGameMode('zen'));
+            
+            const fastButton = document.createElement('button');
+            fastButton.textContent = 'Fast Mode';
+            fastButton.addEventListener('click', () => this.setGameMode('fast'));
+            
+            this.modeSelector.appendChild(zenButton);
+            this.modeSelector.appendChild(fastButton);
+            document.body.appendChild(this.modeSelector);
+        }
+    }
 }
 
 // Initialize game
