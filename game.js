@@ -273,7 +273,7 @@ class Bubble {
 class Game {
     constructor() {
         this.canvas = document.getElementById('gameCanvas');
-        this.ctx = this.canvas.getContext('2d');
+        this.ctx = this.canvas.getContext('2d', { alpha: true });
         this.score = 0;
         this.highScore = localStorage.getItem('highScore') || 0;
         this.isPlaying = false;
@@ -287,19 +287,19 @@ class Game {
         this.modes = {
             zen: {
                 spawnInterval: 1000,
-                minSpawnInterval: 1000, // Keep spawn interval constant
-                baseSpeed: 1.05, // 30% slower (was 1.5)
-                maxSpeed: 1.05, // Keep speed constant
+                minSpawnInterval: 1000,
+                baseSpeed: 1.05,
+                maxSpeed: 1.05,
                 negativeBubbleChance: 0.05,
-                maxBubbles: 14 // 40% more bubbles (was 10)
+                maxBubbles: 14
             },
             fast: {
                 spawnInterval: 1000,
-                minSpawnInterval: 1000, // Keep spawn interval constant
-                baseSpeed: 2.75, // 10% faster (was 2.5)
-                maxSpeed: 2.75, // Keep speed constant
+                minSpawnInterval: 1000,
+                baseSpeed: 2.75,
+                maxSpeed: 2.75,
                 negativeBubbleChance: 0.2,
-                maxBubbles: 15 // Keep same amount
+                maxBubbles: 15
             }
         };
         
@@ -415,6 +415,7 @@ class Game {
     animate(currentTime) {
         if (!this.isPlaying || this.isPaused) return;
 
+        // Clear only the canvas area
         this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
 
         // Update and draw particles
