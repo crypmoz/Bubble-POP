@@ -51,16 +51,16 @@ body {
     height: 100%;
     pointer-events: none;
     z-index: 0;
+    overflow: hidden;
 }
 
 .star {
     position: absolute;
-    width: 2px;
-    height: 2px;
     background: white;
     border-radius: 50%;
     opacity: 0;
     animation: twinkle var(--twinkle-duration, 3s) infinite;
+    box-shadow: 0 0 3px rgba(255, 255, 255, 0.8);
 }
 
 .game-container {
@@ -171,20 +171,20 @@ button:active {
     justify-content: center;
     cursor: pointer;
     font-size: 24px;
-    transition: transform 0.2s ease;
+    transition: all 0.2s ease;
+    position: relative;
+}
+
+.power-up:hover {
+    background: rgba(255, 255, 255, 0.3);
+    transform: translateY(-2px);
 }
 
 .power-up:active {
     transform: scale(0.9);
-    background: rgba(255, 255, 255, 0.3);
 }
 
-.power-up.active {
-    background: rgba(255, 255, 255, 0.3);
-}
-
-.power-up.tooltip-visible::after,
-.power-up:hover::after {
+.power-up::after {
     content: attr(data-tooltip);
     position: absolute;
     bottom: 120%;
@@ -194,16 +194,16 @@ button:active {
     background: rgba(0, 0, 0, 0.8);
     color: white;
     border-radius: 6px;
-    font-size: clamp(12px, 2.5vw, 14px);
+    font-size: 14px;
     white-space: nowrap;
-    opacity: 1;
-    visibility: visible;
-    z-index: 10;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.3s, visibility 0.3s;
     pointer-events: none;
+    z-index: 1000;
 }
 
-.power-up.tooltip-visible::before,
-.power-up:hover::before {
+.power-up::before {
     content: '';
     position: absolute;
     bottom: 120%;
@@ -211,10 +211,19 @@ button:active {
     transform: translateX(-50%);
     border: 6px solid transparent;
     border-top-color: rgba(0, 0, 0, 0.8);
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.3s, visibility 0.3s;
+    pointer-events: none;
+    z-index: 1000;
+}
+
+.power-up:hover::after,
+.power-up:hover::before,
+.power-up.tooltip-visible::after,
+.power-up.tooltip-visible::before {
     opacity: 1;
     visibility: visible;
-    pointer-events: none;
-    z-index: 10;
 }
 
 .power-up.cooldown {
@@ -327,6 +336,12 @@ button:active {
         font-size: 20px;
     }
     
+    .power-up::after {
+        font-size: 12px;
+        padding: 6px 10px;
+        bottom: 110%;
+    }
+    
     .game-title {
         font-size: 32px;
         margin-bottom: 20px;
@@ -355,6 +370,20 @@ button:active {
     .game-title {
         font-size: 24px;
         margin-bottom: 15px;
+    }
+    
+    .power-up::after {
+        bottom: 50%;
+        left: 120%;
+        transform: translateY(-50%);
+    }
+    
+    .power-up::before {
+        bottom: 50%;
+        left: 120%;
+        transform: translateY(-50%);
+        border: 6px solid transparent;
+        border-right-color: rgba(0, 0, 0, 0.8);
     }
 }
 

@@ -304,19 +304,58 @@ class Game {
         this.highScoreElement = document.getElementById('highScore');
         this.gameOverlay = document.getElementById('gameOverlay');
         
-        // Initialize power-ups
+        // Initialize power-ups with labels
         this.powerUps = {
-            shield: { element: document.getElementById('shield'), active: false },
-            slowMotion: { element: document.getElementById('slowMotion'), active: false },
-            doublePoints: { element: document.getElementById('doublePoints'), active: false }
+            shield: { 
+                element: document.getElementById('shield'), 
+                active: false,
+                label: 'Shield (Blocks Negative Points)',
+                icon: '🛡️'
+            },
+            slowMotion: { 
+                element: document.getElementById('slowMotion'), 
+                active: false,
+                label: 'Slow Motion',
+                icon: '⏱️'
+            },
+            doublePoints: { 
+                element: document.getElementById('doublePoints'), 
+                active: false,
+                label: 'Double Points',
+                icon: '2️⃣'
+            }
         };
         
         // Set up event listeners
         this.setupEventListeners();
         
+        // Create starry background
+        this.createStarryBackground();
+        
         // Initial setup
         this.resizeCanvas();
         this.highScoreElement.textContent = this.highScore;
+    }
+
+    createStarryBackground() {
+        const starsContainer = document.querySelector('.stars');
+        if (!starsContainer) {
+            const container = document.createElement('div');
+            container.className = 'stars';
+            document.body.insertBefore(container, document.body.firstChild);
+            
+            const numberOfStars = 100;
+            for (let i = 0; i < numberOfStars; i++) {
+                const star = document.createElement('div');
+                star.className = 'star';
+                star.style.left = `${Math.random() * 100}%`;
+                star.style.top = `${Math.random() * 100}%`;
+                star.style.width = `${Math.random() * 2 + 1}px`;
+                star.style.height = star.style.width;
+                star.style.setProperty('--twinkle-duration', `${Math.random() * 3 + 2}s`);
+                container.appendChild(star);
+            }
+        }
     }
 
     setupEventListeners() {
@@ -356,12 +395,26 @@ class Game {
             this.resizeCanvas();
         });
 
-        // Set up power-up click handlers
+        // Set up power-up click handlers with tooltips
         Object.entries(this.powerUps).forEach(([key, powerUp]) => {
+            powerUp.element.setAttribute('data-tooltip', powerUp.label);
+            powerUp.element.innerHTML = powerUp.icon;
+            
             powerUp.element.addEventListener('click', (e) => {
                 e.preventDefault();
                 this.activatePowerUp(key);
             });
+
+            // Mobile tooltip handling
+            powerUp.element.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                const tooltip = powerUp.element.getAttribute('data-tooltip');
+                powerUp.element.classList.add('tooltip-visible');
+                
+                setTimeout(() => {
+                    powerUp.element.classList.remove('tooltip-visible');
+                }, 2000);
+            }, { passive: false });
         });
 
         // Game control buttons
