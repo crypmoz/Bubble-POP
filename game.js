@@ -200,22 +200,30 @@ class Game {
         this.bubbles = [];
         this.lastBubbleTime = 0;
         this.bubbleInterval = 1000;
+        this.particles = [];
         
+        // Get DOM elements
         this.startButton = document.getElementById('startButton');
         this.pauseButton = document.getElementById('pauseButton');
         this.scoreElement = document.getElementById('score');
         this.highScoreElement = document.getElementById('highScore');
         this.gameOverlay = document.getElementById('gameOverlay');
         
+        // Initialize event listeners
         this.startButton.addEventListener('click', () => this.startGame());
         this.pauseButton.addEventListener('click', () => this.togglePause());
         
         // Initialize power-ups
         this.powerUps = {
-            shield: document.getElementById('shield'),
-            slowMotion: document.getElementById('slowMotion'),
-            doublePoints: document.getElementById('doublePoints')
+            shield: { element: document.getElementById('shield'), active: false, duration: 5000 },
+            slowMotion: { element: document.getElementById('slowMotion'), active: false, duration: 5000 },
+            doublePoints: { element: document.getElementById('doublePoints'), active: false, duration: 5000 }
         };
+        
+        // Set up power-up click handlers
+        Object.entries(this.powerUps).forEach(([key, powerUp]) => {
+            powerUp.element.addEventListener('click', () => this.activatePowerUp(key));
+        });
         
         // Improved touch handling
         this.canvas.addEventListener('touchstart', (e) => {
@@ -260,6 +268,9 @@ class Game {
         // Initial setup
         this.resizeCanvas();
         this.highScoreElement.textContent = this.highScore;
+        
+        // Show initial overlay
+        this.gameOverlay.style.display = 'flex';
     }
     
     startGame() {
@@ -272,6 +283,12 @@ class Game {
         this.startButton.style.display = 'none';
         this.pauseButton.style.display = 'inline-block';
         this.gameOverlay.style.display = 'none';
+        
+        // Reset any active power-ups
+        Object.values(this.powerUps).forEach(powerUp => {
+            powerUp.active = false;
+            powerUp.element.classList.remove('active');
+        });
         
         this.animate();
     }
@@ -415,7 +432,7 @@ class Game {
         if (this.powerUps[powerUp].active) return;
         
         this.powerUps[powerUp].active = true;
-        document.getElementById(powerUp).classList.add('active');
+        this.powerUps[powerUp].element.classList.add('active');
         
         // Apply power-up effects
         switch(powerUp) {
@@ -433,7 +450,7 @@ class Game {
         // Reset power-up after duration
         setTimeout(() => {
             this.powerUps[powerUp].active = false;
-            document.getElementById(powerUp).classList.remove('active');
+            this.powerUps[powerUp].element.classList.remove('active');
             
             if (powerUp === 'slowMotion') {
                 this.bubbles.forEach(bubble => bubble.speed *= 2);
